@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Outlook to PDF Converter</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ── -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="6" fill="#1a56db"/>
+            <path d="M7 8h8a5 5 0 0 1 0 10H7V8Z" fill="#fff" opacity=".9"/>
+            <path d="M17 13a3 3 0 1 1 0 6h-2v-6h2Z" fill="#fff"/>
+            <rect x="19" y="15" width="2" height="8" rx="1" fill="#f59e0b"/>
+          </svg>
+          <span>Outlook to PDF</span>
+        </div>
+        <p class="tagline">Drop Outlook .msg files and their attachments — get organized PDFs with original metadata preserved.</p>
+      </div>
+    </header>
+
+    <!-- ── Main content ── -->
+    <main class="app-main">
+
+      <!-- Drop zone -->
+      <div id="dropZone" class="drop-zone" role="region" aria-label="File drop area">
+        <div class="drop-icon" aria-hidden="true">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <circle cx="28" cy="28" r="28" fill="#eff6ff"/>
+            <path d="M28 18v12M22 24l6-6 6 6" stroke="#1a56db" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M18 36h20" stroke="#1a56db" stroke-width="2.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="drop-primary">Drag &amp; drop files here</p>
+        <p class="drop-secondary">or <label class="file-link" for="fileInput">browse files</label></p>
+        <p class="drop-hint">Supports: <strong>.msg</strong> &nbsp;·&nbsp; <strong>.pdf</strong> &nbsp;·&nbsp; <strong>.doc / .docx</strong> &nbsp;·&nbsp; <strong>.ppt / .pptx</strong></p>
+        <input type="file" id="fileInput" multiple
+               accept=".msg,.pdf,.doc,.docx,.ppt,.pptx"
+               aria-label="Select files" />
+      </div>
+
+      <!-- File queue -->
+      <div id="fileQueue" class="file-queue hidden" aria-live="polite">
+        <div class="queue-header">
+          <h2>Selected files</h2>
+          <button id="clearBtn" class="btn-ghost" type="button">Clear all</button>
+        </div>
+        <ul id="fileList" class="file-list"></ul>
+        <div class="queue-actions">
+          <button id="convertBtn" class="btn-primary" type="button">Convert to PDF</button>
+        </div>
+      </div>
+
+      <!-- Jobs panel -->
+      <div id="jobsPanel" class="jobs-panel" aria-live="polite"></div>
+
+    </main>
+
+    <!-- ── Footer ── -->
+    <footer class="app-footer">
+      <p>Files are processed locally on this server. Nothing is sent externally.</p>
+    </footer>
+
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

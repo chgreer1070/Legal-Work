@@ -1,0 +1,15 @@
+flask>=3.0
+extract-msg>=0.55
+pypdf>=4.0
+reportlab>=4.0
+python-docx>=1.0
+python-pptx>=1.0
+pillow>=10.0
+mammoth>=1.6
+weasyprint>=60.0
+beautifulsoup4>=4.11,<4.14
+olefile>=0.46
+compressed-rtf>=1.0
+tzlocal>=4.2,<6
+RTFDE>=0.1.1,<0.2
+red-black-tree-mod>=1.20,<=1.23
