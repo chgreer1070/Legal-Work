@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Alerts - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>FX Threshold Alerts</h1>
+    <div class="fx-actions">
+        <select id="status-filter" onchange="loadAlerts()">
+            <option value="">All Statuses</option>
+            <option value="triggered">Triggered</option>
+            <option value="pending_approval">Pending Approval</option>
+            <option value="approved">Approved</option>
+            <option value="sent">Sent</option>
+            <option value="dismissed">Dismissed</option>
+        </select>
+    </div>
+</div>
+
+<div class="table-card">
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Pair</th>
+                <th>Base Rate</th>
+                <th>Current Rate</th>
+                <th>Deviation</th>
+                <th>Exposure</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="alerts-table">
+            <tr><td colspan="10" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', loadAlerts);
+
+async function loadAlerts() {
+    const status = document.getElementById('status-filter').value;
+    const url = status ? `/fx/api/alerts?status=${status}` : '/fx/api/alerts';
+    try {
+        const resp = await fetch(url);
+        const alerts = await resp.json();
+        const tbody = document.getElementById('alerts-table');
+        if (alerts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10">No alerts found</td></tr>';
+        } else {
+            tbody.innerHTML = alerts.map(a => `
+                <tr>
+                    <td><a href="/fx/alerts/${a.id}">#${a.id}</a></td>
+                    <td>${a.customer_name || '--'}</td>
+                    <td>${a.currency_pair}</td>
+                    <td>${a.base_rate.toFixed(4)}</td>
+                    <td>${a.current_rate.toFixed(4)}</td>
+                    <td class="${a.deviation_pct > 5 ? 'text-danger' : ''}">${a.deviation_pct.toFixed(2)}%</td>
+                    <td>$${a.exposure_amount.toLocaleString()}</td>
+                    <td><span class="status-badge status-${a.status}">${a.status}</span></td>
+                    <td>${new Date(a.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <a href="/fx/alerts/${a.id}" class="btn btn-sm">View</a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Load alerts error:', e); }
+}
+</script>
+{% endblock %}

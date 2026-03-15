@@ -1,0 +1,111 @@
+/* FX Recovery - Chart.js wrappers for rate and exposure charts */
+
+const PAIR_COLORS = {
+    'USD/BRL': { line: '#e74c3c', bg: 'rgba(231,76,60,0.1)' },
+    'USD/MXN': { line: '#3498db', bg: 'rgba(52,152,219,0.1)' },
+    'USD/CNY': { line: '#2ecc71', bg: 'rgba(46,204,113,0.1)' },
+};
+
+let rateChartInstance = null;
+let exposureChartInstance = null;
+
+async function loadRateChart() {
+    const canvas = document.getElementById('rateChart');
+    if (!canvas) return;
+
+    const pairs = ['USD/BRL', 'USD/MXN', 'USD/CNY'];
+    const datasets = [];
+
+    for (const pair of pairs) {
+        try {
+            const resp = await fetch(`/fx/api/rates/${pair}/history?days=90`);
+            const data = await resp.json();
+            if (data.length === 0) continue;
+
+            const colors = PAIR_COLORS[pair] || { line: '#95a5a6', bg: 'rgba(149,165,166,0.1)' };
+            datasets.push({
+                label: pair,
+                data: data.map(d => ({ x: d.fetched_at, y: d.rate })),
+                borderColor: colors.line,
+                backgroundColor: colors.bg,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2,
+            });
+        } catch (e) {
+            console.error(`Rate chart error for ${pair}:`, e);
+        }
+    }
+
+    if (rateChartInstance) rateChartInstance.destroy();
+
+    if (datasets.length === 0) {
+        canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No rate data available. Click "Refresh Rates" to fetch.</p>';
+        return;
+    }
+
+    rateChartInstance = new Chart(canvas, {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true,
+            interaction: { intersect: false, mode: 'index' },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: { unit: 'week' },
+                    grid: { display: false },
+                },
+                y: {
+                    beginAtZero: false,
+                    grid: { color: '#f0f0f0' },
+                },
+            },
+            plugins: {
+                legend: { position: 'top' },
+            },
+        },
+    });
+}
+
+async function loadExposureChart() {
+    const canvas = document.getElementById('exposureChart');
+    if (!canvas) return;
+
+    try {
+        const resp = await fetch('/fx/api/dashboard/exposure-by-pair');
+        const data = await resp.json();
+
+        const pairs = Object.keys(data);
+        if (pairs.length === 0) {
+            canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No exposure data available.</p>';
+            return;
+        }
+
+        const colors = pairs.map(p => (PAIR_COLORS[p] || { line: '#95a5a6' }).line);
+
+        if (exposureChartInstance) exposureChartInstance.destroy();
+
+        exposureChartInstance = new Chart(canvas, {
+            type: 'doughnut',
+            data: {
+                labels: pairs,
+                datasets: [{
+                    data: pairs.map(p => data[p]),
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#fff',
+                }],
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                },
+            },
+        });
+    } catch (e) {
+        console.error('Exposure chart error:', e);
+    }
+}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Audit Log - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>Audit Trail</h1>
+    <div class="fx-actions">
+        <select id="entity-filter" onchange="loadAudit()">
+            <option value="">All Entities</option>
+            <option value="contract">Contracts</option>
+            <option value="alert">Alerts</option>
+            <option value="prediction">Predictions</option>
+        </select>
+    </div>
+</div>
+
+<div class="table-card">
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Event</th>
+                <th>Entity</th>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>AI Model</th>
+            </tr>
+        </thead>
+        <tbody id="audit-table">
+            <tr><td colspan="6" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', loadAudit);
+
+async function loadAudit() {
+    const entityType = document.getElementById('entity-filter').value;
+    const url = entityType ? `/fx/api/audit?entity_type=${entityType}` : '/fx/api/audit';
+    try {
+        const resp = await fetch(url);
+        const entries = await resp.json();
+        const tbody = document.getElementById('audit-table');
+        if (entries.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">No audit entries</td></tr>';
+        } else {
+            tbody.innerHTML = entries.map(e => `
+                <tr>
+                    <td>${new Date(e.timestamp).toLocaleString()}</td>
+                    <td>${e.event_type}</td>
+                    <td>${e.entity_type} #${e.entity_id || '--'}</td>
+                    <td>${e.actor}</td>
+                    <td>${e.action}</td>
+                    <td>${e.ai_model_used || '--'}</td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Load audit error:', e); }
+}
+</script>
+{% endblock %}

@@ -13,3 +13,12 @@ compressed-rtf>=1.0
 tzlocal>=4.2,<6
 RTFDE>=0.1.1,<0.2
 red-black-tree-mod>=1.20,<=1.23
+
+# FX Recovery System
+anthropic>=0.40
+pydantic>=2.0
+sqlalchemy>=2.0
+apscheduler>=3.10
+requests>=2.31
+python-dotenv>=1.0
+numpy>=1.24

@@ -13,6 +13,8 @@ env/
 # App runtime directories
 uploads/
 output/
+fx_uploads/
+fx_recovery.db
 
 # OS
 .DS_Store

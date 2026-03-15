@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Contracts - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>Customer Contracts</h1>
+</div>
+
+<div class="upload-card">
+    <h3>Upload New Contract</h3>
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="form-row">
+            <div class="form-group">
+                <label>Customer Name</label>
+                <input type="text" name="customer_name" required placeholder="e.g., Acme Corp">
+            </div>
+            <div class="form-group">
+                <label>Contract Reference</label>
+                <input type="text" name="contract_reference" placeholder="e.g., MSA-2026-001">
+            </div>
+            <div class="form-group">
+                <label>Contract File (PDF/DOCX)</label>
+                <input type="file" name="file" accept=".pdf,.docx,.doc" required>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload & Extract Clauses</button>
+    </form>
+    <div id="upload-status"></div>
+</div>
+
+<div class="table-card">
+    <h3>All Contracts</h3>
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Reference</th>
+                <th>Status</th>
+                <th>FX Clauses</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="contracts-table">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', loadContracts);
+
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const status = document.getElementById('upload-status');
+    status.textContent = 'Uploading and extracting clauses...';
+    status.className = 'status-info';
+
+    try {
+        const resp = await fetch('/fx/contracts/upload', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (resp.ok) {
+            status.textContent = `Contract created (ID: ${data.contract_id}). ${data.clauses_extracted} clauses extracted.`;
+            status.className = 'status-success';
+            form.reset();
+            loadContracts();
+        } else {
+            status.textContent = data.error || 'Upload failed';
+            status.className = 'status-error';
+        }
+    } catch(e) {
+        status.textContent = 'Upload failed: ' + e.message;
+        status.className = 'status-error';
+    }
+});
+
+async function loadContracts() {
+    try {
+        const resp = await fetch('/fx/api/contracts');
+        const contracts = await resp.json();
+        const tbody = document.getElementById('contracts-table');
+        if (contracts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No contracts uploaded yet</td></tr>';
+        } else {
+            tbody.innerHTML = contracts.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.customer_name}</td>
+                    <td>${c.contract_reference}</td>
+                    <td><span class="status-badge status-${c.status}">${c.status}</span></td>
+                    <td>${c.clause_count}</td>
+                    <td>${new Date(c.created_at).toLocaleDateString()}</td>
+                    <td><a href="/fx/contracts/${c.id}" class="btn btn-sm">View</a></td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Load contracts error:', e); }
+}
+</script>
+{% endblock %}

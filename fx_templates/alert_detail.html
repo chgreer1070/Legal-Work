@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Alert Detail - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>Alert Detail</h1>
+    <a href="{{ url_for('fx.fx_alerts.list_alerts') }}" class="btn">Back to Alerts</a>
+</div>
+
+<div class="detail-card" id="alert-info">
+    <p class="loading">Loading alert...</p>
+</div>
+
+<div class="detail-card" id="notification-section" style="display:none;">
+    <h3>Notification Draft</h3>
+    <div id="notification-text" class="notification-preview"></div>
+    <div class="fx-actions" id="notification-actions"></div>
+</div>
+
+<script>
+const alertId = {{ alert_id }};
+
+document.addEventListener('DOMContentLoaded', loadAlert);
+
+async function loadAlert() {
+    try {
+        const resp = await fetch(`/fx/api/alerts/${alertId}`);
+        const data = await resp.json();
+
+        document.getElementById('alert-info').innerHTML = `
+            <div class="detail-grid">
+                <div><strong>Customer:</strong> ${data.customer_name || '--'}</div>
+                <div><strong>Contract:</strong> ${data.contract_reference || '--'}</div>
+                <div><strong>Currency Pair:</strong> ${data.currency_pair}</div>
+                <div><strong>Base Rate:</strong> ${data.base_rate.toFixed(4)}</div>
+                <div><strong>Current Rate:</strong> ${data.current_rate.toFixed(4)}</div>
+                <div><strong>Deviation:</strong> <span class="text-danger">${data.deviation_pct.toFixed(2)}%</span></div>
+                <div><strong>Exposure:</strong> $${data.exposure_amount.toLocaleString()}</div>
+                <div><strong>Status:</strong> <span class="status-badge status-${data.status}">${data.status}</span></div>
+                <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
+                ${data.approved_by ? `<div><strong>Approved by:</strong> ${data.approved_by} at ${new Date(data.approved_at).toLocaleString()}</div>` : ''}
+            </div>
+            <div class="fx-actions" style="margin-top:1rem;">
+                ${data.status === 'triggered' ? `<button onclick="generateNotification()" class="btn btn-primary">Generate Notification</button>` : ''}
+                ${['triggered', 'notification_drafted', 'pending_approval'].includes(data.status) ? `<button onclick="dismissAlert()" class="btn btn-danger">Dismiss</button>` : ''}
+            </div>
+        `;
+
+        // Show notification section
+        const notifSection = document.getElementById('notification-section');
+        if (data.notification_text) {
+            notifSection.style.display = 'block';
+            document.getElementById('notification-text').innerHTML = `<pre>${data.notification_text}</pre>`;
+
+            let actions = '';
+            if (data.status === 'pending_approval') {
+                actions = `<button onclick="approveAlert()" class="btn btn-primary">Approve</button>
+                           <button onclick="dismissAlert()" class="btn btn-danger">Dismiss</button>`;
+            } else if (data.status === 'approved') {
+                actions = `<button onclick="sendAlert()" class="btn btn-primary">Mark as Sent</button>`;
+            }
+            document.getElementById('notification-actions').innerHTML = actions;
+        }
+    } catch(e) { console.error('Load alert error:', e); }
+}
+
+async function generateNotification() {
+    try {
+        const resp = await fetch(`/fx/api/alerts/${alertId}/generate-notification`, { method: 'POST' });
+        const data = await resp.json();
+        if (resp.ok) {
+            alert('Notification generated. Review and approve below.');
+            loadAlert();
+        } else {
+            alert('Generation failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function approveAlert() {
+    if (!confirm('Approve this notification for sending?')) return;
+    try {
+        const resp = await fetch(`/fx/api/alerts/${alertId}/approve`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({approved_by: 'operator'})
+        });
+        if (resp.ok) { loadAlert(); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function dismissAlert() {
+    if (!confirm('Dismiss this alert?')) return;
+    try {
+        const resp = await fetch(`/fx/api/alerts/${alertId}/dismiss`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({dismissed_by: 'operator'})
+        });
+        if (resp.ok) { loadAlert(); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function sendAlert() {
+    if (!confirm('Mark this notification as sent?')) return;
+    try {
+        const resp = await fetch(`/fx/api/alerts/${alertId}/send`, { method: 'POST' });
+        if (resp.ok) { loadAlert(); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+</script>
+{% endblock %}

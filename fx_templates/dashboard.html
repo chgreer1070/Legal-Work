@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>FX Recovery Dashboard</h1>
+    <div class="fx-actions">
+        <button onclick="refreshRates()" class="btn btn-primary">Refresh Rates</button>
+        <button onclick="runPredictions()" class="btn btn-secondary">Run Predictions</button>
+    </div>
+</div>
+
+<div class="stats-grid" id="stats-grid">
+    <div class="stat-card">
+        <div class="stat-label">Active Contracts</div>
+        <div class="stat-value" id="stat-contracts">--</div>
+    </div>
+    <div class="stat-card stat-alert">
+        <div class="stat-label">Open Alerts</div>
+        <div class="stat-value" id="stat-alerts">--</div>
+    </div>
+    <div class="stat-card stat-warning">
+        <div class="stat-label">Total Exposure</div>
+        <div class="stat-value" id="stat-exposure">--</div>
+    </div>
+    <div class="stat-card stat-success">
+        <div class="stat-label">Notifications Sent</div>
+        <div class="stat-value" id="stat-sent">--</div>
+    </div>
+</div>
+
+<div class="charts-row">
+    <div class="chart-card">
+        <h3>FX Rates (90 Days)</h3>
+        <canvas id="rateChart"></canvas>
+    </div>
+    <div class="chart-card">
+        <h3>Exposure by Currency Pair</h3>
+        <canvas id="exposureChart"></canvas>
+    </div>
+</div>
+
+<div class="table-card">
+    <h3>Recent Alerts</h3>
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Customer</th>
+                <th>Pair</th>
+                <th>Deviation</th>
+                <th>Exposure</th>
+                <th>Status</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody id="recent-alerts">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="{{ url_for('fx.static', filename='js/charts.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    loadDashboard();
+});
+
+async function loadDashboard() {
+    // Load summary stats
+    try {
+        const resp = await fetch('/fx/api/dashboard/summary');
+        const data = await resp.json();
+        document.getElementById('stat-contracts').textContent = data.active_contracts;
+        document.getElementById('stat-alerts').textContent = data.open_alerts;
+        document.getElementById('stat-exposure').textContent = '$' + data.total_exposure.toLocaleString();
+        document.getElementById('stat-sent').textContent = data.sent_alerts;
+    } catch(e) { console.error('Dashboard summary error:', e); }
+
+    // Load recent alerts
+    try {
+        const resp = await fetch('/fx/api/alerts');
+        const alerts = await resp.json();
+        const tbody = document.getElementById('recent-alerts');
+        if (alerts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No alerts</td></tr>';
+        } else {
+            tbody.innerHTML = alerts.slice(0, 10).map(a => `
+                <tr>
+                    <td><a href="/fx/alerts/${a.id}">#${a.id}</a></td>
+                    <td>${a.customer_name || '--'}</td>
+                    <td>${a.currency_pair}</td>
+                    <td>${a.deviation_pct.toFixed(2)}%</td>
+                    <td>$${a.exposure_amount.toLocaleString()}</td>
+                    <td><span class="status-badge status-${a.status}">${a.status}</span></td>
+                    <td>${new Date(a.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Alerts error:', e); }
+
+    // Load charts
+    loadRateChart();
+    loadExposureChart();
+}
+
+async function refreshRates() {
+    try {
+        const resp = await fetch('/fx/api/rates/refresh', { method: 'POST' });
+        const data = await resp.json();
+        alert(`Updated ${data.rates_updated} rates. ${data.new_alerts} new alerts.`);
+        loadDashboard();
+    } catch(e) { alert('Rate refresh failed: ' + e.message); }
+}
+
+async function runPredictions() {
+    try {
+        const resp = await fetch('/fx/api/predictions/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
+        });
+        const data = await resp.json();
+        alert(`Predictions complete for ${data.length} pairs.`);
+    } catch(e) { alert('Prediction failed: ' + e.message); }
+}
+</script>
+{% endblock %}
