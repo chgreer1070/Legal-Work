@@ -28,7 +28,7 @@ def forecast_threshold_crossing(
     """
     session = get_session()
     try:
-        cutoff = datetime.utcnow() - timedelta(days=120)
+        cutoff = datetime.utcnow() - timedelta(days=90)
         rates = (
             session.query(FXRate)
             .filter(FXRate.currency_pair == currency_pair, FXRate.fetched_at >= cutoff)
@@ -36,7 +36,7 @@ def forecast_threshold_crossing(
             .all()
         )
 
-        if len(rates) < 10:
+        if len(rates) < 5:
             return _empty_prediction(currency_pair, horizon_days)
 
         values = np.array([float(r.rate) for r in rates])
@@ -44,9 +44,7 @@ def forecast_threshold_crossing(
         # Calculate daily returns
         returns = np.diff(values) / values[:-1]
 
-        # Annualized volatility
         daily_vol = np.std(returns) if len(returns) > 1 else 0.01
-        horizon_vol = daily_vol * math.sqrt(horizon_days)
 
         # Current trend: 20-day vs 50-day moving average
         short_ma = np.mean(values[-20:]) if len(values) >= 20 else np.mean(values)
@@ -56,12 +54,12 @@ def forecast_threshold_crossing(
         # Direction
         direction = "depreciation" if trend > 0 else "appreciation"
 
-        # Probability of crossing threshold
-        # Simplified: assume log-normal distribution of returns
+        # Probability of crossing threshold over the horizon
         threshold_decimal = threshold_pct / 100.0
-        if horizon_vol > 0:
-            z_score = (threshold_decimal - abs(trend)) / horizon_vol
-            # Approximate normal CDF using error function
+        expected_move = trend * horizon_days
+        horizon_std = daily_vol * math.sqrt(horizon_days)
+        if horizon_std > 0:
+            z_score = (threshold_decimal - abs(expected_move)) / horizon_std
             crossing_prob = 1.0 - 0.5 * (1.0 + math.erf(z_score / math.sqrt(2)))
         else:
             crossing_prob = 0.0
@@ -70,8 +68,8 @@ def forecast_threshold_crossing(
 
         # Confidence interval (1 sigma around current rate)
         current_rate = float(values[-1])
-        confidence_lower = current_rate * (1.0 - horizon_vol)
-        confidence_upper = current_rate * (1.0 + horizon_vol)
+        confidence_lower = current_rate * (1.0 - horizon_std)
+        confidence_upper = current_rate * (1.0 + horizon_std)
 
         prediction = Prediction(
             currency_pair=currency_pair,
@@ -95,7 +93,7 @@ def forecast_threshold_crossing(
                 "pair": currency_pair,
                 "crossing_probability": crossing_prob,
                 "direction": direction,
-                "horizon_vol": float(horizon_vol),
+                "horizon_std": float(horizon_std),
                 "trend": float(trend),
             },
         )

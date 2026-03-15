@@ -143,6 +143,11 @@ def upload_contract():
             contract.status = "active"
             session.commit()
 
+            # Generate mock transactions for each extracted clause's currency pair
+            from fx.exposure.transaction_data import generate_mock_transactions
+            for clause_data in result.clauses:
+                generate_mock_transactions(contract.id, clause_data.currency_pair)
+
             return jsonify({
                 "contract_id": contract.id,
                 "clauses_extracted": len(result.clauses),

@@ -16,6 +16,11 @@ output/
 fx_uploads/
 fx_recovery.db
 
+# Environment files
+.env
+.env.*
+*.env
+
 # OS
 .DS_Store
 Thumbs.db

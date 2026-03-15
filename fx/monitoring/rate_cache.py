@@ -29,7 +29,20 @@ def refresh_rates() -> list[dict]:
         session.commit()
     finally:
         session.close()
+
+    cleanup_old_rates()
     return saved
+
+
+def cleanup_old_rates(days: int = 90):
+    """Delete FXRate records older than the specified number of days."""
+    session = get_session()
+    try:
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        session.query(FXRate).filter(FXRate.fetched_at < cutoff).delete()
+        session.commit()
+    finally:
+        session.close()
 
 
 def get_latest_rates() -> dict[str, dict]:

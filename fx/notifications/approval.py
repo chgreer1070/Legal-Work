@@ -17,7 +17,7 @@ def approve_alert(alert_id: int, approved_by: str = "operator") -> dict:
         if not alert:
             raise ValueError(f"Alert {alert_id} not found")
 
-        if alert.status not in ("notification_drafted", "pending_approval"):
+        if alert.status != "pending_approval":
             raise ValueError(f"Alert {alert_id} cannot be approved from status '{alert.status}'")
 
         alert.status = "approved"
@@ -48,6 +48,9 @@ def dismiss_alert(alert_id: int, dismissed_by: str = "operator") -> dict:
         alert = session.query(Alert).filter(Alert.id == alert_id).first()
         if not alert:
             raise ValueError(f"Alert {alert_id} not found")
+
+        if alert.status in ("sent", "dismissed", "approved"):
+            raise ValueError(f"Alert {alert_id} cannot be dismissed from status '{alert.status}'")
 
         alert.status = "dismissed"
 

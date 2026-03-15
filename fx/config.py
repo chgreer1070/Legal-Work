@@ -16,6 +16,7 @@ NOTIFICATION_MAX_TOKENS = 2048
 
 # FX Rate Feed
 FX_FEED_SOURCE = os.environ.get("FX_FEED_SOURCE", "mock")  # 'mock' or 'oanda'
+FX_DEMO_MODE = os.environ.get("FX_DEMO_MODE", "deterministic")  # 'deterministic' or 'random'
 OANDA_API_KEY = os.environ.get("OANDA_API_KEY", "")
 OANDA_ACCOUNT_ID = os.environ.get("OANDA_ACCOUNT_ID", "")
 

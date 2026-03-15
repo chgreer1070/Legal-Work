@@ -3,6 +3,8 @@ Claude API integration for extracting FX clauses from contract text.
 """
 
 import json
+import logging
+
 import anthropic
 
 from fx.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUSE_EXTRACTION_MAX_TOKENS
@@ -43,7 +45,9 @@ def extract_clauses(contract_text: str, contract_id: int | None = None) -> Extra
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     prompt = EXTRACTION_PROMPT.format(contract_text=contract_text)
 
-    response = client.messages.create(
+    from fx.utils import call_claude_with_retry
+    response = call_claude_with_retry(
+        client,
         model=CLAUDE_MODEL,
         max_tokens=CLAUSE_EXTRACTION_MAX_TOKENS,
         system=SYSTEM_PROMPT,
@@ -82,15 +86,15 @@ def _parse_clauses(raw_text: str) -> list[FXClauseSchema]:
     elif "```" in text:
         text = text.split("```")[1].split("```")[0].strip()
 
+    logger = logging.getLogger(__name__)
+
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        # Try to find JSON object in the text
-        start = text.find("{")
-        end = text.rfind("}") + 1
-        if start >= 0 and end > start:
-            data = json.loads(text[start:end])
-        else:
+        # Use brace-depth counter to find matching JSON object
+        data = _extract_json_by_depth(text)
+        if data is None:
+            logger.warning("Could not find valid JSON in Claude response: %s", text[:200])
             return []
 
     clause_list = data.get("clauses", []) if isinstance(data, dict) else data
@@ -100,7 +104,43 @@ def _parse_clauses(raw_text: str) -> list[FXClauseSchema]:
         try:
             clause = FXClauseSchema(**item)
             validated.append(clause)
-        except Exception:
-            continue  # Skip malformed clauses
+        except Exception as e:
+            logger.warning("Skipping malformed clause: %s — raw: %s", e, item)
+            continue
 
     return validated
+
+
+def _extract_json_by_depth(text: str):
+    """Extract JSON object using brace-depth counting instead of rfind."""
+    start = text.find("{")
+    if start < 0:
+        return None
+
+    depth = 0
+    in_string = False
+    escape_next = False
+
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\":
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[start:i + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None

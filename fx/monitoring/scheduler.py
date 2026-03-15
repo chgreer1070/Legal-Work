@@ -7,13 +7,18 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fx.config import RATE_FETCH_INTERVAL_MINUTES, THRESHOLD_CHECK_INTERVAL_MINUTES
 
 _scheduler = None
+_flask_app = None
 
 
 def _fetch_rates_job():
     """Background job: fetch and cache current FX rates."""
     try:
         from fx.monitoring.rate_cache import refresh_rates
-        refresh_rates()
+        if _flask_app:
+            with _flask_app.app_context():
+                refresh_rates()
+        else:
+            refresh_rates()
     except Exception as e:
         print(f"[FX Scheduler] Rate fetch error: {e}")
 
@@ -22,7 +27,11 @@ def _check_thresholds_job():
     """Background job: check all thresholds against current rates."""
     try:
         from fx.monitoring.threshold_checker import check_all_thresholds
-        alerts = check_all_thresholds()
+        if _flask_app:
+            with _flask_app.app_context():
+                alerts = check_all_thresholds()
+        else:
+            alerts = check_all_thresholds()
         if alerts:
             print(f"[FX Scheduler] {len(alerts)} new alerts triggered")
     except Exception as e:
@@ -31,9 +40,11 @@ def _check_thresholds_job():
 
 def start_scheduler(app=None):
     """Start the background scheduler for rate monitoring."""
-    global _scheduler
+    global _scheduler, _flask_app
     if _scheduler is not None:
         return
+
+    _flask_app = app
 
     _scheduler = BackgroundScheduler()
     _scheduler.add_job(

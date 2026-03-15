@@ -22,13 +22,20 @@ def log_event(
     session=None,
 ):
     """Record an audit entry with optional AI provenance hashes."""
+    # Build details dict including full AI prompts/responses for SOX compliance
+    full_details = dict(details) if details else {}
+    if ai_prompt:
+        full_details["ai_prompt"] = ai_prompt
+    if ai_response:
+        full_details["ai_response"] = ai_response
+
     entry = AuditEntry(
         event_type=event_type,
         entity_type=entity_type,
         entity_id=entity_id,
         actor=actor,
         action=action,
-        details=json.dumps(details) if details else None,
+        details=json.dumps(full_details) if full_details else None,
         ai_model_used=ai_model_used,
         ai_prompt_hash=hashlib.sha256(ai_prompt.encode()).hexdigest() if ai_prompt else None,
         ai_response_hash=hashlib.sha256(ai_response.encode()).hexdigest() if ai_response else None,

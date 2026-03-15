@@ -65,7 +65,7 @@ def api_generate_notification(alert_id: int):
         if not alert:
             return jsonify({"error": "Alert not found"}), 404
 
-        if alert.status not in ("triggered", "notification_drafted"):
+        if alert.status != "triggered":
             return jsonify({"error": f"Cannot generate notification for status '{alert.status}'"}), 400
 
         clause = session.query(FXClause).filter(FXClause.id == alert.clause_id).first()

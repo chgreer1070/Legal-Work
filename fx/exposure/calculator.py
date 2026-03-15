@@ -16,9 +16,9 @@ def calculate_exposure(
     session=None,
 ) -> Decimal:
     """
-    Calculate financial exposure (delta) from rate deviation and transaction volume.
+    Calculate financial exposure from rate deviation and transaction volume.
 
-    Exposure = transaction_volume * (current_rate - base_rate) / base_rate
+    Volume is in USD (base currency). Exposure = volume * |rate_delta|.
     """
     owns_session = session is None
     if owns_session:
@@ -34,15 +34,16 @@ def calculate_exposure(
             .all()
         )
 
-        total_volume = sum(t.volume for t in transactions) if transactions else Decimal("1000000")
-
-        if base_rate == 0:
+        if not transactions:
             return Decimal("0")
 
-        rate_delta = current_rate - base_rate
-        exposure = total_volume * rate_delta / base_rate
+        total_volume = sum(t.volume for t in transactions)
 
-        return abs(round(exposure, 2))
+        # Volume in USD * |rate change| = USD exposure from FX movement
+        rate_delta = abs(current_rate - base_rate)
+        exposure = total_volume * rate_delta
+
+        return round(exposure, 2)
     finally:
         if owns_session:
             session.close()
@@ -56,7 +57,7 @@ def get_total_exposure_by_pair() -> dict[str, float]:
     try:
         alerts = (
             session.query(Alert)
-            .filter(Alert.status.in_(["triggered", "notification_drafted", "pending_approval"]))
+            .filter(Alert.status.in_(["triggered", "pending_approval"]))
             .all()
         )
         exposure_by_pair = {}

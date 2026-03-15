@@ -26,7 +26,7 @@ def dashboard_summary():
         total_clauses = session.query(FXClause).count()
         open_alerts = (
             session.query(Alert)
-            .filter(Alert.status.in_(["triggered", "notification_drafted", "pending_approval"]))
+            .filter(Alert.status.in_(["triggered", "pending_approval"]))
             .count()
         )
         approved_alerts = session.query(Alert).filter(Alert.status == "approved").count()
@@ -35,7 +35,7 @@ def dashboard_summary():
         # Total exposure from open alerts
         alerts = (
             session.query(Alert)
-            .filter(Alert.status.in_(["triggered", "notification_drafted", "pending_approval"]))
+            .filter(Alert.status.in_(["triggered", "pending_approval"]))
             .all()
         )
         total_exposure = sum(float(a.exposure_amount) for a in alerts)

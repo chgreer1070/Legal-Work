@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -88,6 +89,7 @@ class FXClause(Base):
 
 class FXRate(Base):
     __tablename__ = "fx_rates"
+    __table_args__ = (Index("ix_fx_rates_pair_time", "currency_pair", "fetched_at"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     currency_pair: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
