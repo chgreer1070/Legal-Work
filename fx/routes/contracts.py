@@ -2,15 +2,17 @@
 Contract management routes.
 """
 
-import os
 from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
+from werkzeug.utils import secure_filename
 
 from fx.config import CONTRACT_UPLOAD_DIR
 from fx.db import get_session
 from fx.models import Contract, FXClause
 from fx.audit.logger import log_event
+
+ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
 
 contracts_bp = Blueprint("fx_contracts", __name__)
 
@@ -64,17 +66,26 @@ def upload_contract():
     if not file.filename:
         return jsonify({"error": "No file selected"}), 400
 
-    customer_name = request.form.get("customer_name", "Unknown Customer")
-    contract_ref = request.form.get("contract_reference", "")
+    # Validate file extension
+    filename = secure_filename(file.filename)
+    if not filename:
+        return jsonify({"error": "Invalid filename"}), 400
+
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return jsonify({"error": f"Unsupported file type: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+
+    customer_name = request.form.get("customer_name", "Unknown Customer")[:255]
+    contract_ref = request.form.get("contract_reference", "")[:100]
 
     if not contract_ref:
         import uuid
         contract_ref = f"FX-{uuid.uuid4().hex[:8].upper()}"
 
-    # Save uploaded file
+    # Save uploaded file with sanitized filename
     upload_dir = Path(CONTRACT_UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / file.filename
+    file_path = upload_dir / filename
     file.save(str(file_path))
 
     session = get_session()

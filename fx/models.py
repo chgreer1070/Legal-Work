@@ -126,6 +126,14 @@ class Alert(Base):
     contract: Mapped["Contract"] = relationship(back_populates="alerts")
 
     def to_dict(self):
+        # Access relationship data safely — may be detached from session
+        try:
+            customer_name = self.contract.customer_name if self.contract else None
+            contract_ref = self.contract.contract_reference if self.contract else None
+        except Exception:
+            customer_name = None
+            contract_ref = None
+
         return {
             "id": self.id,
             "clause_id": self.clause_id,
@@ -140,8 +148,8 @@ class Alert(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "approved_by": self.approved_by,
             "approved_at": self.approved_at.isoformat() if self.approved_at else None,
-            "customer_name": self.contract.customer_name if self.contract else None,
-            "contract_reference": self.contract.contract_reference if self.contract else None,
+            "customer_name": customer_name,
+            "contract_reference": contract_ref,
         }
 
 

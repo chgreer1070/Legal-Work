@@ -1,5 +1,13 @@
 /* FX Recovery Dashboard - Common JS utilities */
 
+// HTML escape to prevent XSS when inserting into innerHTML
+function esc(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
+
 // Format currency
 function formatCurrency(amount) {
     return '$' + Number(amount).toLocaleString('en-US', {

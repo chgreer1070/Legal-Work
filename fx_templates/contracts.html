@@ -87,13 +87,13 @@ async function loadContracts() {
         } else {
             tbody.innerHTML = contracts.map(c => `
                 <tr>
-                    <td>${c.id}</td>
-                    <td>${c.customer_name}</td>
-                    <td>${c.contract_reference}</td>
-                    <td><span class="status-badge status-${c.status}">${c.status}</span></td>
-                    <td>${c.clause_count}</td>
+                    <td>${parseInt(c.id)}</td>
+                    <td>${esc(c.customer_name)}</td>
+                    <td>${esc(c.contract_reference)}</td>
+                    <td><span class="status-badge status-${esc(c.status)}">${esc(c.status)}</span></td>
+                    <td>${parseInt(c.clause_count)}</td>
                     <td>${new Date(c.created_at).toLocaleDateString()}</td>
-                    <td><a href="/fx/contracts/${c.id}" class="btn btn-sm">View</a></td>
+                    <td><a href="/fx/contracts/${parseInt(c.id)}" class="btn btn-sm">View</a></td>
                 </tr>
             `).join('');
         }

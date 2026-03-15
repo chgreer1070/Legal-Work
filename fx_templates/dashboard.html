@@ -87,12 +87,12 @@ async function loadDashboard() {
         } else {
             tbody.innerHTML = alerts.slice(0, 10).map(a => `
                 <tr>
-                    <td><a href="/fx/alerts/${a.id}">#${a.id}</a></td>
-                    <td>${a.customer_name || '--'}</td>
-                    <td>${a.currency_pair}</td>
-                    <td>${a.deviation_pct.toFixed(2)}%</td>
-                    <td>$${a.exposure_amount.toLocaleString()}</td>
-                    <td><span class="status-badge status-${a.status}">${a.status}</span></td>
+                    <td><a href="/fx/alerts/${parseInt(a.id)}">#${parseInt(a.id)}</a></td>
+                    <td>${esc(a.customer_name) || '--'}</td>
+                    <td>${esc(a.currency_pair)}</td>
+                    <td>${Number(a.deviation_pct).toFixed(2)}%</td>
+                    <td>$${Number(a.exposure_amount).toLocaleString()}</td>
+                    <td><span class="status-badge status-${esc(a.status)}">${esc(a.status)}</span></td>
                     <td>${new Date(a.created_at).toLocaleDateString()}</td>
                 </tr>
             `).join('');

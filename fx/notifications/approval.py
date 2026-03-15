@@ -23,7 +23,6 @@ def approve_alert(alert_id: int, approved_by: str = "operator") -> dict:
         alert.status = "approved"
         alert.approved_by = approved_by
         alert.approved_at = datetime.utcnow()
-        session.commit()
 
         log_event(
             event_type="notification_approved",
@@ -32,11 +31,14 @@ def approve_alert(alert_id: int, approved_by: str = "operator") -> dict:
             action=f"Notification approved by {approved_by}",
             actor=approved_by,
             details={"previous_status": "pending_approval"},
+            session=session,
         )
 
-        return alert.to_dict()
+        session.commit()
+        result = alert.to_dict()
     finally:
         session.close()
+    return result
 
 
 def dismiss_alert(alert_id: int, dismissed_by: str = "operator") -> dict:
@@ -48,7 +50,6 @@ def dismiss_alert(alert_id: int, dismissed_by: str = "operator") -> dict:
             raise ValueError(f"Alert {alert_id} not found")
 
         alert.status = "dismissed"
-        session.commit()
 
         log_event(
             event_type="alert_dismissed",
@@ -56,11 +57,14 @@ def dismiss_alert(alert_id: int, dismissed_by: str = "operator") -> dict:
             entity_id=alert_id,
             action=f"Alert dismissed by {dismissed_by}",
             actor=dismissed_by,
+            session=session,
         )
 
-        return alert.to_dict()
+        session.commit()
+        result = alert.to_dict()
     finally:
         session.close()
+    return result
 
 
 def mark_sent(alert_id: int) -> dict:
@@ -75,7 +79,6 @@ def mark_sent(alert_id: int) -> dict:
             raise ValueError(f"Alert {alert_id} must be approved before marking as sent")
 
         alert.status = "sent"
-        session.commit()
 
         log_event(
             event_type="notification_sent",
@@ -83,8 +86,11 @@ def mark_sent(alert_id: int) -> dict:
             entity_id=alert_id,
             action="Notification marked as sent",
             actor="system",
+            session=session,
         )
 
-        return alert.to_dict()
+        session.commit()
+        result = alert.to_dict()
     finally:
         session.close()
+    return result

@@ -46,9 +46,9 @@ async function loadContract() {
 
         document.getElementById('contract-info').innerHTML = `
             <div class="detail-grid">
-                <div><strong>Customer:</strong> ${data.customer_name}</div>
-                <div><strong>Reference:</strong> ${data.contract_reference}</div>
-                <div><strong>Status:</strong> <span class="status-badge status-${data.status}">${data.status}</span></div>
+                <div><strong>Customer:</strong> ${esc(data.customer_name)}</div>
+                <div><strong>Reference:</strong> ${esc(data.contract_reference)}</div>
+                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(data.status)}</span></div>
                 <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
             </div>
         `;
@@ -59,15 +59,15 @@ async function loadContract() {
         } else {
             tbody.innerHTML = data.clauses.map(c => `
                 <tr>
-                    <td><strong>${c.currency_pair}</strong></td>
-                    <td>${c.base_rate.toFixed(4)}</td>
-                    <td>${c.threshold_pct}%</td>
-                    <td>${c.review_frequency}</td>
-                    <td>${c.adjustment_method}</td>
-                    <td>${c.notification_period_days}</td>
-                    <td>${(c.confidence_score * 100).toFixed(0)}%</td>
+                    <td><strong>${esc(c.currency_pair)}</strong></td>
+                    <td>${Number(c.base_rate).toFixed(4)}</td>
+                    <td>${Number(c.threshold_pct)}%</td>
+                    <td>${esc(c.review_frequency)}</td>
+                    <td>${esc(c.adjustment_method)}</td>
+                    <td>${parseInt(c.notification_period_days)}</td>
+                    <td>${(Number(c.confidence_score) * 100).toFixed(0)}%</td>
                 </tr>
-                ${c.clause_text ? `<tr><td colspan="7" class="clause-text">${c.clause_text}</td></tr>` : ''}
+                ${c.clause_text ? `<tr><td colspan="7" class="clause-text">${esc(c.clause_text)}</td></tr>` : ''}
             `).join('');
         }
     } catch(e) { console.error('Load contract error:', e); }

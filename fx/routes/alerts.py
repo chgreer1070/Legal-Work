@@ -8,7 +8,6 @@ from fx.db import get_session
 from fx.models import Alert, Contract, FXClause, Transaction
 from fx.notifications.generator import generate_notification
 from fx.notifications.approval import approve_alert, dismiss_alert, mark_sent
-from fx.audit.logger import log_event
 
 alerts_bp = Blueprint("fx_alerts", __name__)
 

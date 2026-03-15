@@ -70,6 +70,7 @@ def current_rates():
 def rate_history(pair: str):
     """Rate history for a currency pair."""
     days = request.args.get("days", 30, type=int)
+    days = max(1, min(days, 365))  # Bound to 1-365 days
     history = get_rate_history(pair, days=days)
     return jsonify(history)
 
@@ -122,5 +123,6 @@ def audit_entries():
     entity_type = request.args.get("entity_type")
     entity_id = request.args.get("entity_id", type=int)
     limit = request.args.get("limit", 100, type=int)
+    limit = max(1, min(limit, 500))  # Bound to 1-500 entries
     entries = get_audit_log(entity_type=entity_type, entity_id=entity_id, limit=limit)
     return jsonify(entries)

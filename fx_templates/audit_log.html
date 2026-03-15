@@ -48,11 +48,11 @@ async function loadAudit() {
             tbody.innerHTML = entries.map(e => `
                 <tr>
                     <td>${new Date(e.timestamp).toLocaleString()}</td>
-                    <td>${e.event_type}</td>
-                    <td>${e.entity_type} #${e.entity_id || '--'}</td>
-                    <td>${e.actor}</td>
-                    <td>${e.action}</td>
-                    <td>${e.ai_model_used || '--'}</td>
+                    <td>${esc(e.event_type)}</td>
+                    <td>${esc(e.entity_type)} #${e.entity_id || '--'}</td>
+                    <td>${esc(e.actor)}</td>
+                    <td>${esc(e.action)}</td>
+                    <td>${esc(e.ai_model_used) || '--'}</td>
                 </tr>
             `).join('');
         }

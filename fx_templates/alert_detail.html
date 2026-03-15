@@ -29,16 +29,16 @@ async function loadAlert() {
 
         document.getElementById('alert-info').innerHTML = `
             <div class="detail-grid">
-                <div><strong>Customer:</strong> ${data.customer_name || '--'}</div>
-                <div><strong>Contract:</strong> ${data.contract_reference || '--'}</div>
-                <div><strong>Currency Pair:</strong> ${data.currency_pair}</div>
-                <div><strong>Base Rate:</strong> ${data.base_rate.toFixed(4)}</div>
-                <div><strong>Current Rate:</strong> ${data.current_rate.toFixed(4)}</div>
-                <div><strong>Deviation:</strong> <span class="text-danger">${data.deviation_pct.toFixed(2)}%</span></div>
-                <div><strong>Exposure:</strong> $${data.exposure_amount.toLocaleString()}</div>
-                <div><strong>Status:</strong> <span class="status-badge status-${data.status}">${data.status}</span></div>
+                <div><strong>Customer:</strong> ${esc(data.customer_name) || '--'}</div>
+                <div><strong>Contract:</strong> ${esc(data.contract_reference) || '--'}</div>
+                <div><strong>Currency Pair:</strong> ${esc(data.currency_pair)}</div>
+                <div><strong>Base Rate:</strong> ${Number(data.base_rate).toFixed(4)}</div>
+                <div><strong>Current Rate:</strong> ${Number(data.current_rate).toFixed(4)}</div>
+                <div><strong>Deviation:</strong> <span class="text-danger">${Number(data.deviation_pct).toFixed(2)}%</span></div>
+                <div><strong>Exposure:</strong> $${Number(data.exposure_amount).toLocaleString()}</div>
+                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(data.status)}</span></div>
                 <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
-                ${data.approved_by ? `<div><strong>Approved by:</strong> ${data.approved_by} at ${new Date(data.approved_at).toLocaleString()}</div>` : ''}
+                ${data.approved_by ? `<div><strong>Approved by:</strong> ${esc(data.approved_by)} at ${new Date(data.approved_at).toLocaleString()}</div>` : ''}
             </div>
             <div class="fx-actions" style="margin-top:1rem;">
                 ${data.status === 'triggered' ? `<button onclick="generateNotification()" class="btn btn-primary">Generate Notification</button>` : ''}
@@ -50,7 +50,7 @@ async function loadAlert() {
         const notifSection = document.getElementById('notification-section');
         if (data.notification_text) {
             notifSection.style.display = 'block';
-            document.getElementById('notification-text').innerHTML = `<pre>${data.notification_text}</pre>`;
+            document.getElementById('notification-text').innerHTML = `<pre>${esc(data.notification_text)}</pre>`;
 
             let actions = '';
             if (data.status === 'pending_approval') {
