@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>P&amp;L Dashboard — Outlook to PDF</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script type="module" src="https://insightexec.flex.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+  <style>
+    .viz-container {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      padding: 20px;
+    }
+    .viz-container tableau-viz {
+      width: 100%;
+      height: 911px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="6" fill="#1a56db"/>
+            <path d="M7 8h8a5 5 0 0 1 0 10H7V8Z" fill="#fff" opacity=".9"/>
+            <path d="M17 13a3 3 0 1 1 0 6h-2v-6h2Z" fill="#fff"/>
+            <rect x="19" y="15" width="2" height="8" rx="1" fill="#f59e0b"/>
+          </svg>
+          <span>Outlook to PDF</span>
+        </div>
+        <nav class="header-nav">
+          <a href="{{ url_for('index') }}" class="nav-link">Converter</a>
+          <a href="{{ url_for('dashboard') }}" class="nav-link active">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main content -->
+    <main class="app-main" style="max-width: 1960px;">
+      <h1 style="font-size: 1.25rem; font-weight: 700; color: var(--gray-900);">Profit and Loss Metrics</h1>
+      <div class="viz-container">
+        <tableau-viz
+          id="tableau-viz"
+          src="https://insightexec.flex.com/t/PMIL/views/ProfitandLossMetrics/Lvl2-Revenue/81cc6813-a985-4bf1-a495-1f360e6d3fe1/0e1a49bf-9251-4e1a-b899-200043a60362"
+          width="1920"
+          height="911"
+          toolbar="bottom"
+        ></tableau-viz>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Files are processed locally on this server. Nothing is sent externally.</p>
+    </footer>
+
+  </div>
+</body>
+</html>

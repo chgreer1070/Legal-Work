@@ -64,6 +64,23 @@ body {
   flex: 1;
 }
 
+.header-nav {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.nav-link {
+  font-size: .88rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+}
+.nav-link:hover { background: var(--gray-100); color: var(--gray-800); }
+.nav-link.active { background: var(--blue-light); color: var(--blue); font-weight: 600; }
+
 .app-main {
   flex: 1;
   max-width: 860px;
