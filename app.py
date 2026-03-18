@@ -29,9 +29,12 @@ from flask import (
 )
 
 from converter import convert_standalone, msg_to_pdf
+from ai_analysis import analyze_document, summarize, extract_metadata, classify_document
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200 MB
+
+from pypdf import PdfReader
 
 UPLOAD_DIR  = Path("uploads")
 OUTPUT_DIR  = Path("output")
@@ -213,6 +216,116 @@ def list_jobs():
     with _jobs_lock:
         snapshot = {jid: {**data, "job_id": jid} for jid, data in _jobs.items()}
     return jsonify(list(snapshot.values()))
+
+
+# ── AI analysis ──────────────────────────────────────────────────────────────
+
+def _extract_text_from_pdf(pdf_path: Path, max_pages: int = 50) -> str:
+    """Extract text content from a PDF file."""
+    try:
+        reader = PdfReader(str(pdf_path))
+        pages = reader.pages[:max_pages]
+        return "\n\n".join(page.extract_text() or "" for page in pages).strip()
+    except Exception:
+        return ""
+
+
+def _gather_job_texts(job_id: str) -> list[dict]:
+    """Collect text from all converted PDFs in a job's output directory."""
+    out_dir = _job_output_dir(job_id)
+    if not out_dir.exists():
+        return []
+
+    documents = []
+    for pdf_path in sorted(out_dir.rglob("*.pdf")):
+        text = _extract_text_from_pdf(pdf_path)
+        if text:
+            documents.append({
+                "filename": str(pdf_path.relative_to(out_dir)),
+                "text": text,
+            })
+    return documents
+
+
+@app.route("/analyze/<job_id>")
+def analyze(job_id: str):
+    """Run AI analysis on all converted documents in a completed job."""
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    if job["status"] == "processing":
+        return jsonify({"error": "Job still processing — wait for conversion to finish"}), 202
+
+    documents = _gather_job_texts(job_id)
+    if not documents:
+        return jsonify({"error": "No text could be extracted from the converted documents"}), 400
+
+    analyses = []
+    errors = []
+
+    for doc in documents:
+        try:
+            result = analyze_document(doc["text"], doc["filename"])
+            analyses.append({
+                "filename": doc["filename"],
+                "analysis": result,
+            })
+        except Exception as exc:
+            errors.append({"filename": doc["filename"], "error": str(exc)})
+
+    return jsonify({
+        "job_id": job_id,
+        "analyses": analyses,
+        "errors": errors,
+    })
+
+
+@app.route("/analyze/<job_id>/<analysis_type>")
+def analyze_single(job_id: str, analysis_type: str):
+    """Run a specific analysis type (summarize, metadata, classify) on a job."""
+    type_map = {
+        "summarize": summarize,
+        "metadata": extract_metadata,
+        "classify": classify_document,
+    }
+
+    if analysis_type not in type_map:
+        return jsonify({"error": f"Unknown analysis type: {analysis_type}. Use: summarize, metadata, classify"}), 400
+
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    if job["status"] == "processing":
+        return jsonify({"error": "Job still processing"}), 202
+
+    documents = _gather_job_texts(job_id)
+    if not documents:
+        return jsonify({"error": "No text could be extracted"}), 400
+
+    fn = type_map[analysis_type]
+    results = []
+    errors = []
+
+    for doc in documents:
+        try:
+            if analysis_type == "summarize":
+                result = fn(doc["text"], f"from file: {doc['filename']}")
+            else:
+                result = fn(doc["text"], doc["filename"])
+            results.append({"filename": doc["filename"], "result": result})
+        except Exception as exc:
+            errors.append({"filename": doc["filename"], "error": str(exc)})
+
+    return jsonify({
+        "job_id": job_id,
+        "analysis_type": analysis_type,
+        "results": results,
+        "errors": errors,
+    })
 
 
 # ── startup ──────────────────────────────────────────────────────────────────

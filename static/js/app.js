@@ -230,9 +230,19 @@ function updateJobCard(jobId, data) {
       html += `</div>`;
     }
 
-    // Download button
+    // Analysis results (if present)
+    const analysisDiv = card.querySelector('.analysis-results');
+    const existingAnalysis = analysisDiv ? analysisDiv.outerHTML : '';
+    if (existingAnalysis) {
+      html += existingAnalysis;
+    }
+
+    // Action buttons
     html += `
       <div class="job-actions">
+        <button class="btn-secondary" onclick="runAnalysis('${jobId}')" id="analyzeBtn-${jobId}">
+          Analyze with AI
+        </button>
         <a href="/download/${jobId}" class="btn-primary" download>
           Download all PDFs (.zip)
         </a>
@@ -256,4 +266,137 @@ function formatBytes(bytes) {
   if (bytes < 1024)       return bytes + ' B';
   if (bytes < 1048576)    return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+// ── AI Analysis ──────────────────────────────────────────────────────────
+
+async function runAnalysis(jobId) {
+  const btn = document.getElementById(`analyzeBtn-${jobId}`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Analyzing…'; }
+
+  const card = document.getElementById(`job-${jobId}`);
+  if (!card) return;
+
+  // Remove any previous analysis
+  const prev = card.querySelector('.analysis-results');
+  if (prev) prev.remove();
+
+  try {
+    const res = await fetch(`/analyze/${jobId}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert('Analysis error: ' + (data.error || res.statusText));
+      return;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'analysis-results';
+
+    if (data.analyses && data.analyses.length > 0) {
+      data.analyses.forEach(item => {
+        container.innerHTML += renderAnalysis(item.filename, item.analysis);
+      });
+    }
+
+    if (data.errors && data.errors.length > 0) {
+      let errHtml = '<div class="analysis-errors">';
+      data.errors.forEach(e => {
+        errHtml += `<div class="error-item">AI error for ${escHtml(e.filename)}: ${escHtml(e.error)}</div>`;
+      });
+      errHtml += '</div>';
+      container.innerHTML += errHtml;
+    }
+
+    // Insert before the job-actions div
+    const actions = card.querySelector('.job-actions');
+    if (actions) {
+      actions.parentNode.insertBefore(container, actions);
+    } else {
+      card.appendChild(container);
+    }
+  } catch (err) {
+    alert('Network error during analysis: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Analyze with AI'; }
+  }
+}
+
+function renderAnalysis(filename, analysis) {
+  let html = `<div class="analysis-doc">`;
+  html += `<div class="analysis-doc-header">${escHtml(filename)}</div>`;
+
+  // Classification
+  const cls = analysis.classification;
+  if (cls) {
+    html += `<div class="analysis-section">`;
+    html += `<div class="analysis-label">Classification</div>`;
+    html += `<div class="analysis-tags">`;
+    html += `<span class="tag tag-category">${escHtml(cls.category)}</span>`;
+    html += `<span class="tag tag-sub">${escHtml(cls.subcategory)}</span>`;
+    html += `<span class="tag tag-sensitivity">${escHtml(cls.sensitivity)}</span>`;
+    html += `<span class="tag tag-priority">${escHtml(cls.priority)}</span>`;
+    html += `</div>`;
+    if (cls.brief_description) {
+      html += `<p class="analysis-desc">${escHtml(cls.brief_description)}</p>`;
+    }
+    if (cls.tags && cls.tags.length) {
+      html += `<div class="analysis-tags">`;
+      cls.tags.forEach(t => { html += `<span class="tag">${escHtml(t)}</span>`; });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  }
+
+  // Summary
+  const sum = analysis.summary;
+  if (sum) {
+    html += `<div class="analysis-section">`;
+    html += `<div class="analysis-label">Summary</div>`;
+    html += `<p class="analysis-text">${escHtml(sum.summary)}</p>`;
+    if (sum.key_points && sum.key_points.length) {
+      html += `<ul class="analysis-points">`;
+      sum.key_points.forEach(p => { html += `<li>${escHtml(p)}</li>`; });
+      html += `</ul>`;
+    }
+    html += `</div>`;
+  }
+
+  // Metadata
+  const meta = analysis.metadata;
+  if (meta) {
+    html += `<div class="analysis-section">`;
+    html += `<div class="analysis-label">Extracted Metadata</div>`;
+    html += `<div class="analysis-meta-grid">`;
+
+    if (meta.parties && meta.parties.length) {
+      html += `<div class="meta-field"><strong>Parties:</strong> ${meta.parties.map(escHtml).join(', ')}</div>`;
+    }
+    if (meta.dates && meta.dates.length) {
+      html += `<div class="meta-field"><strong>Dates:</strong> `;
+      html += meta.dates.map(d => `${escHtml(d.date)} (${escHtml(d.context)})`).join('; ');
+      html += `</div>`;
+    }
+    if (meta.references && meta.references.length) {
+      html += `<div class="meta-field"><strong>References:</strong> ${meta.references.map(escHtml).join(', ')}</div>`;
+    }
+    if (meta.monetary_values && meta.monetary_values.length) {
+      html += `<div class="meta-field"><strong>Monetary Values:</strong> `;
+      html += meta.monetary_values.map(m => `${escHtml(m.amount)} (${escHtml(m.context)})`).join('; ');
+      html += `</div>`;
+    }
+    if (meta.obligations && meta.obligations.length) {
+      html += `<div class="meta-field"><strong>Obligations:</strong></div>`;
+      html += `<ul class="analysis-points">`;
+      meta.obligations.forEach(o => { html += `<li>${escHtml(o)}</li>`; });
+      html += `</ul>`;
+    }
+    if (meta.jurisdictions && meta.jurisdictions.length) {
+      html += `<div class="meta-field"><strong>Jurisdictions:</strong> ${meta.jurisdictions.map(escHtml).join(', ')}</div>`;
+    }
+    html += `</div></div>`;
+  }
+
+  html += `</div>`;
+  return html;
 }
