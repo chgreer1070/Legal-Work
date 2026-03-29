@@ -1,12 +1,17 @@
 """
-Outlook-to-PDF Converter – Flask web application.
+Legal-Work – Flask web application.
 
 Routes
 ------
-GET  /              Drag-and-drop upload page
+GET  /              Drag-and-drop upload page (Outlook-to-PDF converter)
 POST /convert       Accept uploaded files, run conversion, return JSON status
 GET  /download/<id> Download a converted output bundle (zip)
 GET  /jobs          List recent conversion jobs (JSON)
+
+GET  /contracttwin       ContractTwin 3D visualization page
+GET  /contracttwin/demo  Pre-parsed demo EMS contract (JSON)
+POST /contracttwin/parse Parse uploaded/pasted contract text (JSON)
+GET  /contracttwin/scenarios/<id>  Run scenario simulation (JSON)
 """
 
 import json
@@ -29,6 +34,22 @@ from flask import (
 )
 
 from converter import convert_standalone, msg_to_pdf
+
+# ContractTwin imports
+from contract_parser import parse_contract
+from demo_contract import get_demo_contract
+from graph_builder import build_graph
+from plain_english import translate_clause
+from economics_engine import (
+    compute_clause_economics,
+    compute_interaction_effects,
+    compute_portfolio_summary,
+    compute_time_profile,
+    generate_recommendations,
+    monte_carlo_simulation,
+)
+from scenario_engine import get_all_scenario_summaries, run_scenario, SCENARIOS
+from ems_ontology import ZONES
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 200 * 1024 * 1024  # 200 MB
@@ -218,6 +239,119 @@ def list_jobs():
     with _jobs_lock:
         snapshot = {jid: {**data, "job_id": jid} for jid, data in _jobs.items()}
     return jsonify(list(snapshot.values()))
+
+
+# ── ContractTwin routes ─────────────────────────────────────────────────────
+
+# Cache the demo contract result so we don't re-parse on every request
+_demo_cache = {}
+
+
+def _build_full_response(clauses, graph):
+    """Assemble the full ContractTwin JSON response with economics."""
+    # Compute economics for each clause
+    all_econ = {}
+    all_mc = {}
+    for clause in clauses:
+        econ = compute_clause_economics(clause)
+        all_econ[clause["id"]] = econ
+        mc = monte_carlo_simulation(econ, n=500, seed=hash(clause["id"]) % 2**31)
+        all_mc[clause["id"]] = mc
+
+    # Compute interaction effects and recommendations
+    for clause in clauses:
+        cid = clause["id"]
+        interaction = compute_interaction_effects(clause, graph, all_econ)
+        all_econ[cid].update(interaction)
+
+        recs = generate_recommendations(clause, all_econ[cid], interaction)
+        clause["economics"] = {
+            **all_econ[cid],
+            "monte_carlo": all_mc[cid],
+        }
+        clause["recommendations"] = recs
+
+        # Add plain English translation
+        translation = translate_clause(clause)
+        clause["plain_english"] = translation["plain_english"]
+        clause["what_matters"] = translation["what_matters"]
+        clause["watch_for"] = translation["watch_for"]
+        clause["role_views"] = translation["role_views"]
+
+        # Time profile
+        clause["time_profile"] = compute_time_profile(all_econ[cid])
+
+    # Portfolio summary
+    portfolio = compute_portfolio_summary(all_econ, all_mc)
+
+    # Collect all recommendations across clauses, sort by priority
+    all_recs = []
+    for clause in clauses:
+        for rec in clause.get("recommendations", []):
+            all_recs.append({**rec, "clause_id": clause["id"], "clause_title": clause["title"]})
+    all_recs.sort(key=lambda r: r["priority_score"], reverse=True)
+    portfolio["highest_roi_fixes"] = all_recs[:10]
+
+    # Scenario summaries
+    scenarios = get_all_scenario_summaries(clauses, graph)
+
+    return {
+        "clauses": clauses,
+        "graph": graph,
+        "zones": ZONES,
+        "portfolio_summary": portfolio,
+        "scenarios": scenarios,
+    }
+
+
+@app.route("/contracttwin")
+def contracttwin():
+    return render_template("contracttwin.html")
+
+
+@app.route("/contracttwin/demo")
+def contracttwin_demo():
+    if not _demo_cache:
+        text = get_demo_contract()
+        parsed = parse_contract(text)
+        graph = build_graph(parsed["clauses"])
+        response = _build_full_response(parsed["clauses"], graph)
+        response["contract_id"] = parsed["contract_id"]
+        response["title"] = parsed["title"]
+        _demo_cache["data"] = response
+    return jsonify(_demo_cache["data"])
+
+
+@app.route("/contracttwin/parse", methods=["POST"])
+def contracttwin_parse():
+    data = request.get_json(silent=True) or {}
+    text = data.get("text", "")
+    if not text and request.form:
+        text = request.form.get("text", "")
+    if not text:
+        return jsonify({"error": "No contract text provided"}), 400
+    if len(text) < 100:
+        return jsonify({"error": "Contract text too short"}), 400
+
+    parsed = parse_contract(text)
+    graph = build_graph(parsed["clauses"])
+    response = _build_full_response(parsed["clauses"], graph)
+    response["contract_id"] = parsed["contract_id"]
+    response["title"] = parsed["title"]
+    return jsonify(response)
+
+
+@app.route("/contracttwin/scenarios/<scenario_id>")
+def contracttwin_scenario(scenario_id):
+    if scenario_id not in SCENARIOS:
+        return jsonify({"error": f"Unknown scenario: {scenario_id}"}), 404
+
+    # Use demo contract for scenario runs (or could accept contract_id)
+    text = get_demo_contract()
+    parsed = parse_contract(text)
+    graph = build_graph(parsed["clauses"])
+    result = run_scenario(scenario_id, parsed["clauses"], graph)
+    return jsonify(result)
 
 
 # ── startup ──────────────────────────────────────────────────────────────────

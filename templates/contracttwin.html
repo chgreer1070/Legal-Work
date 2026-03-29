@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ContractTwin 3D — EMS Contract Intelligence</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/contracttwin.css') }}" />
+</head>
+<body class="twin-body">
+  <div class="twin-app">
+
+    <!-- Header -->
+    <header class="app-header twin-header">
+      <div class="header-inner">
+        <div class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+            <rect width="28" height="28" rx="6" fill="#1a56db"/>
+            <path d="M7 8h8a5 5 0 0 1 0 10H7V8Z" fill="#fff" opacity=".9"/>
+            <path d="M17 13a3 3 0 1 1 0 6h-2v-6h2Z" fill="#fff"/>
+            <rect x="19" y="15" width="2" height="8" rx="1" fill="#f59e0b"/>
+          </svg>
+          <span>ContractTwin 3D</span>
+        </div>
+        <nav class="header-nav">
+          <a href="{{ url_for('index') }}" class="nav-link">Converter</a>
+          <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+          <a href="{{ url_for('contracttwin') }}" class="nav-link active">ContractTwin</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main layout: sidebar | canvas | detail panel -->
+    <div class="twin-layout">
+
+      <!-- Left sidebar -->
+      <aside class="twin-sidebar" id="sidebar">
+        <!-- Input section -->
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">Contract Input</h3>
+          <button class="btn-twin-primary" id="loadDemoBtn" type="button">Load Demo EMS Contract</button>
+          <div class="sidebar-divider"></div>
+          <textarea id="contractInput" class="twin-textarea"
+                    placeholder="Or paste contract text here..."
+                    rows="4"></textarea>
+          <button class="btn-twin-secondary" id="parseBtn" type="button">Parse Contract</button>
+        </div>
+
+        <!-- Contract info -->
+        <div class="sidebar-section" id="contractInfo" style="display:none">
+          <h3 class="sidebar-title" id="contractTitle">Contract</h3>
+          <div class="stat-row">
+            <span class="stat-label">Clauses</span>
+            <span class="stat-value" id="statClauses">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Dependencies</span>
+            <span class="stat-value" id="statEdges">0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Exposure</span>
+            <span class="stat-value stat-money" id="statExposure">$0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Risk-Adj Margin</span>
+            <span class="stat-value" id="statMargin">0%</span>
+          </div>
+        </div>
+
+        <!-- View controls -->
+        <div class="sidebar-section" id="viewControls" style="display:none">
+          <h3 class="sidebar-title">View Mode</h3>
+          <div class="toggle-group">
+            <button class="toggle-btn active" data-view="risk">Risk</button>
+            <button class="toggle-btn" data-view="economics">Economics</button>
+          </div>
+
+          <h3 class="sidebar-title" style="margin-top:12px">Role Filter</h3>
+          <div class="role-filters">
+            <label class="role-check"><input type="checkbox" value="customer" checked /><span>Customer</span></label>
+            <label class="role-check"><input type="checkbox" value="manufacturer" checked /><span>Manufacturer</span></label>
+            <label class="role-check"><input type="checkbox" value="supplier" checked /><span>Supplier</span></label>
+            <label class="role-check"><input type="checkbox" value="both" checked /><span>Both</span></label>
+          </div>
+        </div>
+
+        <!-- Scenarios -->
+        <div class="sidebar-section" id="scenarioSection" style="display:none">
+          <h3 class="sidebar-title">Scenarios</h3>
+          <select id="scenarioSelect" class="twin-select">
+            <option value="">Select scenario...</option>
+          </select>
+          <button class="btn-twin-secondary" id="runScenarioBtn" type="button">Run Scenario</button>
+          <div id="scenarioResult" class="scenario-result" style="display:none"></div>
+        </div>
+
+        <!-- Zone legend -->
+        <div class="sidebar-section" id="zoneLegend" style="display:none">
+          <h3 class="sidebar-title">Zones</h3>
+          <div id="legendItems" class="legend-items"></div>
+        </div>
+
+        <!-- Top Recommendations -->
+        <div class="sidebar-section" id="topRecsSection" style="display:none">
+          <h3 class="sidebar-title">Highest ROI Fixes</h3>
+          <div id="topRecsList" class="recs-list"></div>
+        </div>
+      </aside>
+
+      <!-- 3D Canvas -->
+      <div class="twin-canvas-wrap" id="canvasWrap">
+        <canvas id="twinCanvas"></canvas>
+        <div id="tooltip" class="twin-tooltip" style="display:none"></div>
+        <div id="loadingOverlay" class="loading-overlay" style="display:none">
+          <div class="loading-spinner"></div>
+          <p>Parsing contract...</p>
+        </div>
+        <!-- Scenario timeline -->
+        <div id="scenarioTimeline" class="scenario-timeline" style="display:none">
+          <div class="timeline-bar">
+            <div class="timeline-progress" id="timelineProgress"></div>
+          </div>
+          <div class="timeline-label" id="timelineLabel"></div>
+          <div class="timeline-cost" id="timelineCost"></div>
+        </div>
+      </div>
+
+      <!-- Right detail panel -->
+      <aside class="twin-detail" id="detailPanel">
+        <div class="detail-header">
+          <h2 class="detail-title" id="detailTitle">Select a clause</h2>
+          <button class="detail-close" id="detailClose" type="button">&times;</button>
+        </div>
+        <div class="detail-body" id="detailBody">
+          <p class="detail-placeholder">Click a node in the 3D view to see clause details, plain English translation, economics, and recommendations.</p>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- Three.js from CDN -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="{{ url_for('static', filename='js/contracttwin.js') }}"></script>
+</body>
+</html>
