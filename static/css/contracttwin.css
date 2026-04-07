@@ -115,6 +115,28 @@
 }
 .twin-textarea:focus { border-color: #2563eb; outline: none; }
 
+/* File input */
+.file-input-label {
+  display: block;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  background: #0f172a;
+  color: #cbd5e1;
+  border: 1px dashed #334155;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+.file-input-label:hover {
+  border-color: #2563eb;
+  background: #111c33;
+}
+.file-input-label input[type="file"] {
+  display: none;
+}
+
 /* Select */
 .twin-select {
   width: 100%;
@@ -446,9 +468,14 @@
 .econ-card-label { font-size: 0.6rem; color: #64748b; }
 .econ-card-value { font-size: 0.8rem; font-weight: 700; color: #e2e8f0; }
 .econ-card-value.money { color: #f59e0b; }
+.econ-card-value.muted { color: #94a3b8; }
 .econ-card-value.risk-high { color: #ef4444; }
 .econ-card-value.risk-medium { color: #f59e0b; }
 .econ-card-value.risk-low { color: #10b981; }
+.econ-card-sub { font-size: 0.62rem; color: #64748b; margin-top: 2px; }
+.stat-value.muted { color: #64748b; font-weight: 500; }
+.stat-row.stat-sub { padding-top: 0; padding-bottom: 6px; }
+.stat-row.stat-sub .stat-label { font-size: 0.65rem; color: #64748b; }
 
 /* Monte Carlo display */
 .mc-bar-wrap {

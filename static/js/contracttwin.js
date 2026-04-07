@@ -474,17 +474,19 @@ function showDetailPanel(clause) {
     </div>`;
 
   // Economics
+  const activationPct = ((econ.activation_probability || 0) * 100).toFixed(0);
   html += `
     <div class="detail-section">
       <p class="ds-label">Financial Exposure</p>
       <div class="econ-grid">
         <div class="econ-card">
-          <div class="econ-card-label">Base Exposure</div>
-          <div class="econ-card-value money">$${(econ.exposure_base || 0).toLocaleString()}</div>
+          <div class="econ-card-label">Expected (P&times;Ceiling)</div>
+          <div class="econ-card-value money">$${(econ.expected_exposure || 0).toLocaleString()}</div>
+          <div class="econ-card-sub">${activationPct}% activation</div>
         </div>
         <div class="econ-card">
-          <div class="econ-card-label">Adjusted</div>
-          <div class="econ-card-value money">$${(econ.adjusted_exposure || 0).toLocaleString()}</div>
+          <div class="econ-card-label">Worst Case Ceiling</div>
+          <div class="econ-card-value money muted">$${(econ.exposure_ceiling || 0).toLocaleString()}</div>
         </div>
         <div class="econ-card">
           <div class="econ-card-label">Interaction Mult.</div>
@@ -792,8 +794,20 @@ function renderContract(data) {
   const portfolio = data.portfolio_summary || {};
   document.getElementById("statExposure").textContent =
     "$" + (portfolio.total_exposure || 0).toLocaleString();
+  const ceilingEl = document.getElementById("statCeiling");
+  if (ceilingEl) {
+    ceilingEl.textContent = "$" + (portfolio.total_ceiling || 0).toLocaleString();
+  }
   const margin = ((portfolio.risk_adjusted_margin || 0) * 100).toFixed(1);
   document.getElementById("statMargin").textContent = margin + "%";
+  const baseMarginEl = document.getElementById("statBaseMargin");
+  if (baseMarginEl) {
+    baseMarginEl.textContent = ((portfolio.base_margin || 0) * 100).toFixed(1) + "%";
+  }
+  // Color the risk-adjusted margin based on health
+  const marginEl = document.getElementById("statMargin");
+  const m = portfolio.risk_adjusted_margin || 0;
+  marginEl.style.color = m >= 0.05 ? "#10b981" : m >= 0.0 ? "#f59e0b" : "#ef4444";
 
   // Zone legend
   const legendItems = document.getElementById("legendItems");
@@ -848,15 +862,30 @@ async function loadDemo() {
 }
 
 async function parseContract() {
+  const fileInput = document.getElementById("contractFile");
+  const file = fileInput && fileInput.files && fileInput.files[0];
   const text = contractInput.value.trim();
-  if (!text || text.length < 100) return;
-  loadingOverlay.style.display = "flex";
-  try {
-    const resp = await fetch("/contracttwin/parse", {
+
+  let fetchOpts;
+  if (file) {
+    const fd = new FormData();
+    fd.append("file", file);
+    fetchOpts = { method: "POST", body: fd };
+  } else {
+    if (!text || text.length < 100) {
+      alert("Paste contract text (at least 100 characters) or upload a file.");
+      return;
+    }
+    fetchOpts = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
-    });
+    };
+  }
+
+  loadingOverlay.style.display = "flex";
+  try {
+    const resp = await fetch("/contracttwin/parse", fetchOpts);
     const data = await resp.json();
     if (data.error) {
       alert(data.error);
@@ -874,6 +903,17 @@ async function parseContract() {
 
 loadDemoBtn.addEventListener("click", loadDemo);
 parseBtn.addEventListener("click", parseContract);
+
+const contractFileInput = document.getElementById("contractFile");
+if (contractFileInput) {
+  contractFileInput.addEventListener("change", () => {
+    const labelText = document.getElementById("fileLabelText");
+    const f = contractFileInput.files && contractFileInput.files[0];
+    if (labelText) {
+      labelText.textContent = f ? f.name : "Upload .txt or .docx";
+    }
+  });
+}
 detailClose.addEventListener("click", () => {
   deselectAll();
 });

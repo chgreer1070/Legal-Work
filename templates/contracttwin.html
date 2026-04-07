@@ -40,6 +40,10 @@
           <h3 class="sidebar-title">Contract Input</h3>
           <button class="btn-twin-primary" id="loadDemoBtn" type="button">Load Demo EMS Contract</button>
           <div class="sidebar-divider"></div>
+          <label class="file-input-label" for="contractFile">
+            <span id="fileLabelText">Upload .txt or .docx</span>
+            <input type="file" id="contractFile" accept=".txt,.md,.docx" />
+          </label>
           <textarea id="contractInput" class="twin-textarea"
                     placeholder="Or paste contract text here..."
                     rows="4"></textarea>
@@ -58,12 +62,20 @@
             <span class="stat-value" id="statEdges">0</span>
           </div>
           <div class="stat-row">
-            <span class="stat-label">Total Exposure</span>
+            <span class="stat-label">Expected Exposure</span>
             <span class="stat-value stat-money" id="statExposure">$0</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Worst Case</span>
+            <span class="stat-value stat-money muted" id="statCeiling">$0</span>
           </div>
           <div class="stat-row">
             <span class="stat-label">Risk-Adj Margin</span>
             <span class="stat-value" id="statMargin">0%</span>
+          </div>
+          <div class="stat-row stat-sub">
+            <span class="stat-label">Base Margin</span>
+            <span class="stat-value muted" id="statBaseMargin">8.0%</span>
           </div>
         </div>
 

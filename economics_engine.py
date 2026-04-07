@@ -74,6 +74,37 @@ _INTERACTION_MULTIPLIERS = {
     "cascading": 2.5,
 }
 
+# Activation probability per financial category — the chance that the modeled
+# exposure actually materializes during a 12-month contract period. Categories
+# whose base formulas already incorporate frequency assumptions get 1.0.
+# Ceiling/tail categories get low probabilities so portfolio totals reflect
+# expected loss, not worst-case sums.
+_ACTIVATION_PROBABILITY = {
+    "liability_tail":      0.03,   # Indemnity / liability cap rarely hit
+    "revenue_risk":        0.40,   # Forecast inaccuracy is common
+    "revenue_commitment":  0.20,
+    "cost_disruption":     0.55,   # ECOs happen but cost varies
+    "material_liability":  0.30,   # NCNR exposure occasionally crystallizes
+    "inventory_liability": 0.35,   # E&O is a recurring risk
+    "working_capital":     0.50,
+    "exit_cost":           0.10,   # Termination probability
+    "disruption_risk":     0.15,   # Force majeure infrequent
+    "delivery_risk":       0.30,
+    "warranty_cost":       1.00,   # Already encoded as expected via claim_rate
+    "cost_of_quality":     1.00,   # Already encoded via defect_rate
+    "compliance_cost":     1.00,   # Recurring expected cost
+    "material_cost":       0.40,
+    "margin":              0.50,
+    "cash_flow":           0.60,
+    "asset_risk":          0.10,
+    "legal_cost":          0.20,
+    "baseline":            0.10,
+}
+
+# Portfolio diversification factor — events across 25+ clauses are not
+# perfectly correlated, so the realized aggregate risk is less than the sum.
+_PORTFOLIO_DIVERSIFICATION = 0.55
+
 # ---------------------------------------------------------------------------
 # Clause-level economics
 # ---------------------------------------------------------------------------
@@ -82,8 +113,12 @@ _INTERACTION_MULTIPLIERS = {
 def compute_clause_economics(clause, params=None):
     """Compute financial metrics for a single clause.
 
-    Returns dict with exposure_base, marginal_risk_contribution,
-    cash_impact_days, and raw economics data.
+    Returns dict with:
+    - exposure_base: raw model output
+    - exposure_ceiling: worst-case (risk-adjusted) maximum loss
+    - expected_exposure: probability-weighted expected loss (the headline number)
+    - adjusted_exposure: alias of expected_exposure for downstream consumers
+    - cash_impact_days, marginal_risk_contribution, financial_category
     """
     p = {**DEFAULT_PARAMS, **(params or {})}
     family_config = CLAUSE_FAMILIES.get(clause["family"], {})
@@ -93,20 +128,27 @@ def compute_clause_economics(clause, params=None):
     model = _EXPOSURE_MODELS.get(fin_category, lambda _: 0)
     exposure_base = model(p)
 
-    # Adjust for risk rating
+    # Risk-adjusted ceiling (worst case)
     risk_multiplier = 0.5 + (clause["risk_rating"] / 5.0) * 1.0
-    adjusted_exposure = exposure_base * risk_multiplier
+    exposure_ceiling = exposure_base * risk_multiplier
+
+    # Probability-weighted expected loss
+    activation_prob = _ACTIVATION_PROBABILITY.get(fin_category, 0.20)
+    expected_exposure = exposure_ceiling * activation_prob
 
     # Cash impact in days
     cash_days = _estimate_cash_impact_days(clause, p)
 
-    # Marginal risk contribution (proportion of total potential exposure)
-    total_potential = p["annual_revenue"] * 0.15  # 15% of revenue as risk base
-    marginal = adjusted_exposure / total_potential if total_potential else 0
+    # Marginal risk contribution (share of total potential expected loss base)
+    total_potential = p["annual_revenue"] * 0.15
+    marginal = expected_exposure / total_potential if total_potential else 0
 
     return {
         "exposure_base": round(exposure_base),
-        "adjusted_exposure": round(adjusted_exposure),
+        "exposure_ceiling": round(exposure_ceiling),
+        "expected_exposure": round(expected_exposure),
+        "adjusted_exposure": round(expected_exposure),  # alias for compatibility
+        "activation_probability": round(activation_prob, 2),
         "marginal_risk_contribution": round(min(marginal, 1.0), 3),
         "cash_impact_days": cash_days,
         "financial_category": fin_category,
@@ -355,21 +397,33 @@ def generate_recommendations(clause, clause_economics, interaction_data):
 def compute_portfolio_summary(all_clauses_economics, all_monte_carlo):
     """Aggregate economics across all clauses into portfolio-level metrics.
 
-    Returns total exposure, risk-adjusted margin, top risk clauses,
-    highest ROI fixes.
+    Sums probability-weighted expected exposures (not worst-case ceilings) and
+    applies a portfolio diversification factor. Also exposes the total worst-
+    case ceiling separately for transparency.
     """
-    total_exposure = sum(
-        e.get("adjusted_exposure", 0) for e in all_clauses_economics.values()
+    annual_revenue = DEFAULT_PARAMS["annual_revenue"]
+    margin_pct = DEFAULT_PARAMS["average_margin_pct"]
+
+    total_ceiling = sum(
+        e.get("exposure_ceiling", e.get("adjusted_exposure", 0))
+        for e in all_clauses_economics.values()
+    )
+    total_expected = sum(
+        e.get("expected_exposure", e.get("adjusted_exposure", 0))
+        for e in all_clauses_economics.values()
     )
     total_compounded = sum(
-        e.get("compounded_exposure", e.get("adjusted_exposure", 0))
+        e.get("compounded_exposure", e.get("expected_exposure", 0))
         for e in all_clauses_economics.values()
     )
 
-    annual_revenue = DEFAULT_PARAMS["annual_revenue"]
-    risk_adjusted_margin = DEFAULT_PARAMS["average_margin_pct"] - (
-        total_exposure / annual_revenue if annual_revenue else 0
-    )
+    # Apply portfolio diversification — events are imperfectly correlated
+    effective_exposure = total_expected * _PORTFOLIO_DIVERSIFICATION
+
+    # Multiplicative margin impact: how much of margin is at risk
+    exposure_ratio = (effective_exposure / annual_revenue) if annual_revenue else 0
+    exposure_ratio = min(exposure_ratio, 1.0)
+    risk_adjusted_margin = margin_pct * (1.0 - exposure_ratio)
 
     # Aggregate Monte Carlo
     agg_p5 = sum(mc.get("p5", 0) for mc in all_monte_carlo.values())
@@ -379,14 +433,19 @@ def compute_portfolio_summary(all_clauses_economics, all_monte_carlo):
     # Top risk clauses by compounded exposure
     sorted_clauses = sorted(
         all_clauses_economics.items(),
-        key=lambda x: x[1].get("compounded_exposure", x[1].get("adjusted_exposure", 0)),
+        key=lambda x: x[1].get("compounded_exposure", x[1].get("expected_exposure", 0)),
         reverse=True,
     )
     top_risk = [cid for cid, _ in sorted_clauses[:5]]
 
     return {
-        "total_exposure": round(total_exposure),
+        "total_exposure": round(total_expected),
+        "total_ceiling": round(total_ceiling),
         "total_compounded_exposure": round(total_compounded),
+        "effective_exposure": round(effective_exposure),
+        "exposure_ratio": round(exposure_ratio, 4),
+        "diversification_factor": _PORTFOLIO_DIVERSIFICATION,
+        "base_margin": margin_pct,
         "risk_adjusted_margin": round(risk_adjusted_margin, 4),
         "monte_carlo_aggregate": {
             "p5": agg_p5,

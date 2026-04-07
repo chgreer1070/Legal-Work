@@ -322,12 +322,57 @@ def contracttwin_demo():
     return jsonify(_demo_cache["data"])
 
 
+_CONTRACT_UPLOAD_EXT = {".txt", ".docx", ".md"}
+
+
+def _extract_contract_text(uploaded_file) -> str:
+    """Extract plain text from an uploaded contract file (.txt, .md, .docx)."""
+    name = (uploaded_file.filename or "").lower()
+    suffix = Path(name).suffix
+    if suffix not in _CONTRACT_UPLOAD_EXT:
+        raise ValueError(
+            f"Unsupported file type: {suffix or 'unknown'}. "
+            "Use .txt, .md, or .docx."
+        )
+
+    raw = uploaded_file.read()
+    if suffix in {".txt", ".md"}:
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return raw.decode("latin-1", errors="replace")
+
+    # .docx — use mammoth (already in requirements.txt)
+    import io
+    import mammoth  # local import so the converter routes don't pay for it
+    result = mammoth.extract_raw_text(io.BytesIO(raw))
+    return result.value or ""
+
+
 @app.route("/contracttwin/parse", methods=["POST"])
 def contracttwin_parse():
-    data = request.get_json(silent=True) or {}
-    text = data.get("text", "")
+    text = ""
+
+    # Option 1: multipart file upload
+    if request.files:
+        uploaded = request.files.get("file") or next(iter(request.files.values()))
+        if uploaded and uploaded.filename:
+            try:
+                text = _extract_contract_text(uploaded)
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+            except Exception as exc:
+                return jsonify({"error": f"Failed to read file: {exc}"}), 400
+
+    # Option 2: JSON body
+    if not text:
+        data = request.get_json(silent=True) or {}
+        text = data.get("text", "")
+
+    # Option 3: form field
     if not text and request.form:
         text = request.form.get("text", "")
+
     if not text:
         return jsonify({"error": "No contract text provided"}), 400
     if len(text) < 100:
