@@ -2,11 +2,23 @@
 FX rate feed - mock implementation with interface for real API.
 """
 
+import logging
 import random
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from fx.config import FX_FEED_SOURCE, FX_DEMO_MODE, CURRENCY_PAIRS
+import requests
+
+from fx.config import (
+    CURRENCY_PAIRS,
+    EXCHANGERATE_HOST_KEY,
+    EXCHANGERATE_HOST_URL,
+    FX_DEMO_MODE,
+    FX_FEED_SOURCE,
+    FX_FEED_TIMEOUT,
+)
+
+logger = logging.getLogger(__name__)
 
 # Base rates aligned with seed clause base rates
 BASE_RATES = {
@@ -38,11 +50,80 @@ def reset_mock_state():
 
 
 def get_current_rates() -> dict[str, dict]:
-    """Get current FX rates for all monitored pairs."""
-    if FX_FEED_SOURCE == "mock":
-        return _get_mock_rates()
-    else:
-        return _get_mock_rates()  # Fallback to mock
+    """Get current FX rates for all monitored pairs.
+
+    Tries the configured live source; on any failure, falls back to mock so
+    the monitoring loop never crashes.
+    """
+    if FX_FEED_SOURCE == "exchangerate_host":
+        try:
+            rates = _get_exchangerate_host_rates()
+            if rates:
+                return rates
+            logger.warning("exchangerate.host returned no rates; falling back to mock")
+        except Exception as e:
+            logger.warning("exchangerate.host fetch failed (%s); falling back to mock", e)
+    return _get_mock_rates()
+
+
+def _get_exchangerate_host_rates() -> dict[str, dict]:
+    """Fetch live rates from exchangerate.host.
+
+    Each pair is parsed as BASE/QUOTE. We group pairs by base currency and
+    issue one HTTP call per base. Returns {} on partial/empty response so the
+    caller can decide to fall back.
+    """
+    by_base: dict[str, list[str]] = {}
+    for pair in CURRENCY_PAIRS:
+        if "/" not in pair:
+            continue
+        base, quote = pair.split("/", 1)
+        by_base.setdefault(base, []).append(quote)
+
+    fetched_at = datetime.utcnow().isoformat()
+    result: dict[str, dict] = {}
+
+    for base, quotes in by_base.items():
+        params = {"base": base, "symbols": ",".join(quotes)}
+        if EXCHANGERATE_HOST_KEY:
+            params["access_key"] = EXCHANGERATE_HOST_KEY
+
+        resp = requests.get(EXCHANGERATE_HOST_URL, params=params, timeout=FX_FEED_TIMEOUT)
+        resp.raise_for_status()
+        payload = resp.json()
+
+        if not payload.get("success", True) and "rates" not in payload:
+            err = payload.get("error", {})
+            raise RuntimeError(f"exchangerate.host error: {err}")
+
+        rates_map = payload.get("rates") or {}
+        for quote in quotes:
+            if quote not in rates_map:
+                logger.warning("exchangerate.host missing quote %s for base %s", quote, base)
+                continue
+            pair_key = f"{base}/{quote}"
+            try:
+                rate_value = float(rates_map[quote])
+            except (TypeError, ValueError):
+                logger.warning("exchangerate.host returned non-numeric rate for %s", pair_key)
+                continue
+            result[pair_key] = {
+                "pair": pair_key,
+                "rate": round(rate_value, 6),
+                "source": "exchangerate.host",
+                "fetched_at": fetched_at,
+            }
+
+    # Require all configured pairs to be present, otherwise treat as failure
+    if len(result) != len(CURRENCY_PAIRS):
+        logger.warning(
+            "exchangerate.host returned %d/%d pairs; treating as failure",
+            len(result),
+            len(CURRENCY_PAIRS),
+        )
+        return {}
+
+    return result
 
 
 def _get_mock_rates() -> dict[str, dict]:
