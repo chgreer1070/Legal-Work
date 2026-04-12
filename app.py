@@ -33,8 +33,6 @@ from flask import (
     url_for,
 )
 
-from converter import convert_standalone, msg_to_pdf
-
 # ContractTwin imports
 from contract_parser import parse_contract
 from demo_contract import get_demo_contract
@@ -75,6 +73,11 @@ def _job_output_dir(job_id: str) -> Path:
 
 def _run_conversion(job_id: str, upload_paths: list[Path]):
     """Background thread: convert all uploaded files and update job state."""
+    # Lazy import: the converter pulls in a heavy stack (extract_msg, weasyprint,
+    # reportlab, etc.) that ContractTwin-only sessions don't need. Keeping it here
+    # means `from app import app` only requires flask + mammoth.
+    from converter import convert_standalone, msg_to_pdf
+
     out_dir = _job_output_dir(job_id)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -344,7 +347,7 @@ def _extract_contract_text(uploaded_file) -> str:
 
     # .docx — use mammoth (already in requirements.txt)
     import io
-    import mammoth  # local import so the converter routes don't pay for it
+    import mammoth  # lazy import — only needed for .docx contract uploads
     result = mammoth.extract_raw_text(io.BytesIO(raw))
     return result.value or ""
 
