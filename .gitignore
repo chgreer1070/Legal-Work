@@ -13,6 +13,20 @@ env/
 # App runtime directories
 uploads/
 output/
+fx_uploads/
+fx_recovery.db
+fx_recovery.db-shm
+fx_recovery.db-wal
+
+# Stress test artifacts
+stress_test.db
+stress_test.db-shm
+stress_test.db-wal
+
+# Environment files
+.env
+.env.*
+*.env
 
 # OS
 .DS_Store

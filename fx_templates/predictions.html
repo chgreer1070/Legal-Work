@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Predictions - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>FX Breach Predictions</h1>
+    <button onclick="runPredictions()" class="btn btn-primary">Run Predictions</button>
+</div>
+
+<div class="table-card">
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>Currency Pair</th>
+                <th>Breach Probability</th>
+                <th>Direction</th>
+                <th>Horizon</th>
+                <th>Confidence Range</th>
+                <th>Model</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody id="predictions-table">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', loadPredictions);
+
+async function loadPredictions() {
+    try {
+        const resp = await fetch('/fx/api/predictions');
+        const predictions = await resp.json();
+        const tbody = document.getElementById('predictions-table');
+        if (predictions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No predictions yet. Click "Run Predictions" to generate.</td></tr>';
+        } else {
+            tbody.innerHTML = predictions.map(p => `
+                <tr>
+                    <td><strong>${p.currency_pair}</strong></td>
+                    <td>
+                        <div class="prob-bar">
+                            <div class="prob-fill ${p.crossing_probability > 0.5 ? 'prob-high' : 'prob-low'}"
+                                 style="width:${(p.crossing_probability * 100).toFixed(0)}%"></div>
+                            <span>${(p.crossing_probability * 100).toFixed(1)}%</span>
+                        </div>
+                    </td>
+                    <td>${p.predicted_direction}</td>
+                    <td>${p.horizon_days} days</td>
+                    <td>${p.confidence_lower ? p.confidence_lower.toFixed(4) + ' - ' + p.confidence_upper.toFixed(4) : '--'}</td>
+                    <td>${p.model_version}</td>
+                    <td>${p.prediction_date || '--'}</td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) { console.error('Load predictions error:', e); }
+}
+
+async function runPredictions() {
+    try {
+        const resp = await fetch('/fx/api/predictions/run', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
+        });
+        if (resp.ok) { loadPredictions(); }
+    } catch(e) { alert('Error: ' + e.message); }
+}
+</script>
+{% endblock %}

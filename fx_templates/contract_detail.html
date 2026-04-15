@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Contract Detail - FX Recovery{% endblock %}
+
+{% block content %}
+<div class="fx-header">
+    <h1>Contract Detail</h1>
+    <div class="fx-actions">
+        <button onclick="reExtract()" class="btn btn-secondary">Re-Extract Clauses</button>
+        <a href="{{ url_for('fx.fx_contracts.list_contracts') }}" class="btn">Back to List</a>
+    </div>
+</div>
+
+<div class="detail-card" id="contract-info">
+    <p class="loading">Loading contract...</p>
+</div>
+
+<div class="table-card">
+    <h3>Extracted FX Clauses</h3>
+    <table class="fx-table">
+        <thead>
+            <tr>
+                <th>Pair</th>
+                <th>Base Rate</th>
+                <th>Threshold</th>
+                <th>Frequency</th>
+                <th>Method</th>
+                <th>Notice (days)</th>
+                <th>Confidence</th>
+            </tr>
+        </thead>
+        <tbody id="clauses-table">
+            <tr><td colspan="7" class="loading">Loading...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+const contractId = {{ contract_id }};
+
+document.addEventListener('DOMContentLoaded', loadContract);
+
+async function loadContract() {
+    try {
+        const resp = await fetch(`/fx/api/contracts/${contractId}`);
+        const data = await resp.json();
+
+        document.getElementById('contract-info').innerHTML = `
+            <div class="detail-grid">
+                <div><strong>Customer:</strong> ${esc(data.customer_name)}</div>
+                <div><strong>Reference:</strong> ${esc(data.contract_reference)}</div>
+                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(data.status)}</span></div>
+                <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
+            </div>
+        `;
+
+        const tbody = document.getElementById('clauses-table');
+        if (!data.clauses || data.clauses.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7">No FX clauses extracted</td></tr>';
+        } else {
+            tbody.innerHTML = data.clauses.map(c => `
+                <tr>
+                    <td><strong>${esc(c.currency_pair)}</strong></td>
+                    <td>${Number(c.base_rate).toFixed(4)}</td>
+                    <td>${Number(c.threshold_pct)}%</td>
+                    <td>${esc(c.review_frequency)}</td>
+                    <td>${esc(c.adjustment_method)}</td>
+                    <td>${parseInt(c.notification_period_days)}</td>
+                    <td>${(Number(c.confidence_score) * 100).toFixed(0)}%</td>
+                </tr>
+                ${c.clause_text ? `<tr><td colspan="7" class="clause-text">${esc(c.clause_text)}</td></tr>` : ''}
+            `).join('');
+        }
+    } catch(e) { console.error('Load contract error:', e); }
+}
+
+async function reExtract() {
+    if (!confirm('Re-extract clauses? This will replace existing extractions.')) return;
+    try {
+        const resp = await fetch(`/fx/contracts/${contractId}/re-extract`, { method: 'POST' });
+        const data = await resp.json();
+        alert(`Re-extraction complete: ${data.clauses_extracted} clauses found.`);
+        loadContract();
+    } catch(e) { alert('Re-extraction failed: ' + e.message); }
+}
+</script>
+{% endblock %}
