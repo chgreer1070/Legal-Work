@@ -25,3 +25,7 @@ numpy>=1.24
 
 # Stress Testing
 locust>=2.20
+
+# Unit tests
+pytest>=7.0
+pytest-mock>=3.10
