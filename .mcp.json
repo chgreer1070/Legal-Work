@@ -7,7 +7,7 @@
         "@upstash/context7-mcp@latest"
       ],
       "env": {
-        "CONTEXT7_API_KEY": "<your-context7-api-key>"
+        "CONTEXT7_API_KEY": "ctx7sk-218816f8-0ecb-436d-a31e-fa73a75d0809"
       }
     },
     "memory": {
