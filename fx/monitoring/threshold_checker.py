@@ -49,7 +49,7 @@ def check_all_thresholds() -> list[dict]:
                     session.query(Alert)
                     .filter(
                         Alert.clause_id == clause.id,
-                        Alert.status.in_(["triggered", "notification_drafted", "pending_approval"]),
+                        Alert.status.in_(["triggered", "pending_approval"]),
                     )
                     .first()
                 )

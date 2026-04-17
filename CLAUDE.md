@@ -52,8 +52,9 @@ This Claude Code sandbox has constraints that look like bugs but aren't:
 - ✅ 15 hardening fixes landed in `14e94a9` (DB WAL+FK, exposure formula, z-score math, state machine, audit logging, retry helper, scheduler app context)
 - ✅ Stress test suite landed (`stress_tests/`)
 - ✅ Live exchangerate.host feed integrated with mock fallback (`44a1b9a`)
-- ❌ No unit/integration tests yet — only stress tests
-- ❌ No PR opened (must be created manually via GitHub web UI)
+- ✅ Pytest suite for core logic landed in `9926b89` (`tests/` — utils, exposure, forecaster, fx_feed, approval)
+- ✅ PR #2 merged to master (`25f5d0e`)
+- ❌ Route handlers, ingestion pipeline, scheduler, and audit logger still lack unit coverage
 
 ## Key files
 
