@@ -17,6 +17,47 @@ ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
 contracts_bp = Blueprint("fx_contracts", __name__)
 
 
+def _persist_clauses(session, contract_id: int, clauses) -> int:
+    """Stage FXClause rows for a contract. Caller commits."""
+    for clause_data in clauses:
+        session.add(FXClause(
+            contract_id=contract_id,
+            currency_pair=clause_data.currency_pair,
+            base_rate=clause_data.base_rate,
+            threshold_pct=clause_data.threshold_pct,
+            review_frequency=clause_data.review_frequency,
+            adjustment_method=clause_data.adjustment_method,
+            notification_period_days=clause_data.notification_period_days,
+            clause_text=clause_data.clause_text,
+            confidence_score=clause_data.confidence_score,
+        ))
+    return len(clauses)
+
+
+def _save_uploaded_file(file) -> tuple[Path, str] | tuple[None, tuple]:
+    """Validate + persist an uploaded contract file.
+
+    Returns (file_path, sanitized_filename) on success, or
+    (None, (error_dict, status_code)) on validation failure.
+    """
+    filename = secure_filename(file.filename)
+    if not filename:
+        return None, ({"error": "Invalid filename"}, 400)
+
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return None, (
+            {"error": f"Unsupported file type: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"},
+            400,
+        )
+
+    upload_dir = Path(CONTRACT_UPLOAD_DIR)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    file_path = upload_dir / filename
+    file.save(str(file_path))
+    return file_path, filename
+
+
 @contracts_bp.route("/contracts")
 def list_contracts():
     """Contract list page."""
@@ -66,31 +107,19 @@ def upload_contract():
     if not file.filename:
         return jsonify({"error": "No file selected"}), 400
 
-    # Validate file extension
-    filename = secure_filename(file.filename)
-    if not filename:
-        return jsonify({"error": "Invalid filename"}), 400
-
-    ext = Path(filename).suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS:
-        return jsonify({"error": f"Unsupported file type: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"}), 400
+    file_path, filename_or_err = _save_uploaded_file(file)
+    if file_path is None:
+        error_dict, status_code = filename_or_err
+        return jsonify(error_dict), status_code
 
     customer_name = request.form.get("customer_name", "Unknown Customer")[:255]
     contract_ref = request.form.get("contract_reference", "")[:100]
-
     if not contract_ref:
         import uuid
         contract_ref = f"FX-{uuid.uuid4().hex[:8].upper()}"
 
-    # Save uploaded file with sanitized filename
-    upload_dir = Path(CONTRACT_UPLOAD_DIR)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / filename
-    file.save(str(file_path))
-
     session = get_session()
     try:
-        # Create contract record
         contract = Contract(
             customer_name=customer_name,
             contract_reference=contract_ref,
@@ -108,7 +137,6 @@ def upload_contract():
             details={"filename": file.filename, "customer": customer_name},
         )
 
-        # Extract text
         try:
             from fx.ingestion.parser import extract_text
             raw_text = extract_text(file_path)
@@ -122,35 +150,20 @@ def upload_contract():
                 "contract_id": contract.id,
             }), 422
 
-        # Extract clauses via Claude API
         try:
             from fx.ingestion.clause_extractor import extract_clauses
             result = extract_clauses(raw_text, contract_id=contract.id)
-            for clause_data in result.clauses:
-                clause = FXClause(
-                    contract_id=contract.id,
-                    currency_pair=clause_data.currency_pair,
-                    base_rate=clause_data.base_rate,
-                    threshold_pct=clause_data.threshold_pct,
-                    review_frequency=clause_data.review_frequency,
-                    adjustment_method=clause_data.adjustment_method,
-                    notification_period_days=clause_data.notification_period_days,
-                    clause_text=clause_data.clause_text,
-                    confidence_score=clause_data.confidence_score,
-                )
-                session.add(clause)
-
+            clause_count = _persist_clauses(session, contract.id, result.clauses)
             contract.status = "active"
             session.commit()
 
-            # Generate mock transactions for each extracted clause's currency pair
             from fx.exposure.transaction_data import generate_mock_transactions
             for clause_data in result.clauses:
                 generate_mock_transactions(contract.id, clause_data.currency_pair)
 
             return jsonify({
                 "contract_id": contract.id,
-                "clauses_extracted": len(result.clauses),
+                "clauses_extracted": clause_count,
                 "status": "active",
             })
         except Exception as e:
@@ -185,24 +198,12 @@ def re_extract_clauses(contract_id: int):
         try:
             from fx.ingestion.clause_extractor import extract_clauses
             result = extract_clauses(contract.raw_text, contract_id=contract_id)
-            for clause_data in result.clauses:
-                clause = FXClause(
-                    contract_id=contract.id,
-                    currency_pair=clause_data.currency_pair,
-                    base_rate=clause_data.base_rate,
-                    threshold_pct=clause_data.threshold_pct,
-                    review_frequency=clause_data.review_frequency,
-                    adjustment_method=clause_data.adjustment_method,
-                    notification_period_days=clause_data.notification_period_days,
-                    clause_text=clause_data.clause_text,
-                    confidence_score=clause_data.confidence_score,
-                )
-                session.add(clause)
+            clause_count = _persist_clauses(session, contract.id, result.clauses)
             session.commit()
 
             return jsonify({
                 "contract_id": contract_id,
-                "clauses_extracted": len(result.clauses),
+                "clauses_extracted": clause_count,
             })
         except Exception as e:
             return jsonify({"error": f"Extraction failed: {str(e)}"}), 500

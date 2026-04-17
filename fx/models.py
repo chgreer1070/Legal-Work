@@ -118,7 +118,7 @@ class Alert(Base):
     current_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     deviation_pct: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False)
     exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=0)
-    status: Mapped[str] = mapped_column(String(50), default="triggered")
+    status: Mapped[str] = mapped_column(String(50), default="triggered", index=True)
     notification_text: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     approved_by: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -223,6 +223,10 @@ class AuditEntry(Base):
     ai_model_used: Mapped[str] = mapped_column(String(100), nullable=True)
     ai_prompt_hash: Mapped[str] = mapped_column(String(64), nullable=True)
     ai_response_hash: Mapped[str] = mapped_column(String(64), nullable=True)
+
+    __table_args__ = (
+        Index("ix_audit_entity", "entity_type", "entity_id"),
+    )
 
     def to_dict(self):
         return {
