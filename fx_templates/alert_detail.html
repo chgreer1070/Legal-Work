@@ -12,7 +12,7 @@
 </div>
 
 <div class="detail-card" id="notification-section" style="display:none;">
-    <h3>Notification Draft</h3>
+    <h2>Notification Draft</h2>
     <div id="notification-text" class="notification-preview"></div>
     <div class="fx-actions" id="notification-actions"></div>
 </div>
@@ -36,7 +36,7 @@ async function loadAlert() {
                 <div><strong>Current Rate:</strong> ${Number(data.current_rate).toFixed(4)}</div>
                 <div><strong>Deviation:</strong> <span class="text-danger">${Number(data.deviation_pct).toFixed(2)}%</span></div>
                 <div><strong>Exposure:</strong> $${Number(data.exposure_amount).toLocaleString()}</div>
-                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(data.status)}</span></div>
+                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(humanizeStatus(data.status))}</span></div>
                 <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
                 ${data.approved_by ? `<div><strong>Approved by:</strong> ${esc(data.approved_by)} at ${new Date(data.approved_at).toLocaleString()}</div>` : ''}
             </div>
@@ -69,12 +69,12 @@ async function generateNotification() {
         const resp = await fetch(`/fx/api/alerts/${alertId}/generate-notification`, { method: 'POST' });
         const data = await resp.json();
         if (resp.ok) {
-            alert('Notification generated. Review and approve below.');
+            showToast('Notification drafted. Review and approve below.', 'success');
             loadAlert();
         } else {
-            alert('Generation failed: ' + (data.error || 'Unknown error'));
+            showToast('Generation failed: ' + (data.error || 'Unknown error'), 'error');
         }
-    } catch(e) { alert('Error: ' + e.message); }
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function approveAlert() {
@@ -85,28 +85,28 @@ async function approveAlert() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({approved_by: 'operator'})
         });
-        if (resp.ok) { loadAlert(); }
-    } catch(e) { alert('Error: ' + e.message); }
+        if (resp.ok) { showToast('Notification approved', 'success'); loadAlert(); }
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function dismissAlert() {
-    if (!confirm('Dismiss this alert?')) return;
+    if (!confirm('Dismiss this alert? This action is logged in the audit trail.')) return;
     try {
         const resp = await fetch(`/fx/api/alerts/${alertId}/dismiss`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({dismissed_by: 'operator'})
         });
-        if (resp.ok) { loadAlert(); }
-    } catch(e) { alert('Error: ' + e.message); }
+        if (resp.ok) { showToast('Alert dismissed', 'success'); loadAlert(); }
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 
 async function sendAlert() {
-    if (!confirm('Mark this notification as sent?')) return;
+    if (!confirm('Mark this notification as sent to the customer?')) return;
     try {
         const resp = await fetch(`/fx/api/alerts/${alertId}/send`, { method: 'POST' });
-        if (resp.ok) { loadAlert(); }
-    } catch(e) { alert('Error: ' + e.message); }
+        if (resp.ok) { showToast('Notification marked as sent', 'success'); loadAlert(); }
+    } catch(e) { showToast('Error: ' + e.message, 'error'); }
 }
 </script>
 {% endblock %}

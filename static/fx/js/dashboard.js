@@ -28,3 +28,42 @@ function formatDate(dateStr) {
         year: 'numeric', month: 'short', day: 'numeric'
     });
 }
+
+// Humanize snake_case enum values (e.g. "pending_approval" -> "Pending Approval")
+function humanizeStatus(s) {
+    if (!s) return '';
+    return String(s).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// Toast notification (auto-dismiss after 4s, aria-live for screen readers)
+function showToast(message, kind) {
+    let host = document.querySelector('.toast-host');
+    if (!host) {
+        host = document.createElement('div');
+        host.className = 'toast-host';
+        host.setAttribute('role', 'status');
+        host.setAttribute('aria-live', 'polite');
+        document.body.appendChild(host);
+    }
+    const t = document.createElement('div');
+    t.className = 'toast' + (kind ? ' toast-' + kind : '');
+    t.textContent = message;
+    host.appendChild(t);
+    setTimeout(() => {
+        t.style.opacity = '0';
+        t.style.transition = 'opacity 200ms';
+        setTimeout(() => t.remove(), 200);
+    }, 4000);
+}
+
+// Run an async action while a button shows loading state.
+async function withButtonLoading(btn, fn) {
+    if (!btn) return fn();
+    btn.classList.add('is-loading');
+    btn.disabled = true;
+    try { return await fn(); }
+    finally {
+        btn.classList.remove('is-loading');
+        btn.disabled = false;
+    }
+}

@@ -40,8 +40,15 @@ async function loadRateChart() {
 
     if (rateChartInstance) rateChartInstance.destroy();
 
+    // Clear any prior empty-state overlay
+    const wrap = canvas.parentElement;
+    wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+
     if (datasets.length === 0) {
-        canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No rate data available. Click "Refresh Rates" to fetch.</p>';
+        const empty = document.createElement('div');
+        empty.className = 'chart-empty';
+        empty.innerHTML = '<div class="empty-state-title">No rate data yet</div><div class="empty-state-hint">Click <strong>Refresh Rates</strong> to fetch the latest exchange rates.</div>';
+        wrap.appendChild(empty);
         return;
     }
 
@@ -50,6 +57,7 @@ async function loadRateChart() {
         data: { datasets },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: { intersect: false, mode: 'index' },
             scales: {
                 x: {
@@ -78,8 +86,14 @@ async function loadExposureChart() {
         const data = await resp.json();
 
         const pairs = Object.keys(data);
+        const wrap = canvas.parentElement;
+        wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+
         if (pairs.length === 0) {
-            canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No exposure data available.</p>';
+            const empty = document.createElement('div');
+            empty.className = 'chart-empty';
+            empty.innerHTML = '<div class="empty-state-title">No exposure yet</div><div class="empty-state-hint">Exposure appears once an alert is triggered for a currency pair.</div>';
+            wrap.appendChild(empty);
             return;
         }
 
@@ -100,6 +114,7 @@ async function loadExposureChart() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom' },
                 },

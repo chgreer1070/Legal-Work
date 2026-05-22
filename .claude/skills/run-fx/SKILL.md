@@ -53,6 +53,9 @@ node /home/user/Legal-Work/.claude/skills/run-fx/driver.mjs shot http://localhos
 
 # Click a selector after navigating
 node /home/user/Legal-Work/.claude/skills/run-fx/driver.mjs click http://localhost:5000/fx/ 'a:has-text("Alerts")' /tmp/fx-alerts.png
+
+# Screenshot with longer wait (1.5s after networkidle) + report JS errors and Chart.js instance state
+node /home/user/Legal-Work/.claude/skills/run-fx/wait-shot.mjs http://localhost:5000/fx/ /tmp/fx-dashboard.png
 ```
 
 `smoke` prints JSON like:
@@ -65,7 +68,7 @@ node /home/user/Legal-Work/.claude/skills/run-fx/driver.mjs click http://localho
 }
 ```
 
-View the PNGs with the `Read` tool. **Always actually look at them** — `networkidle` returns before Chart.js finishes rendering, so chart canvases can be blank even though the page loaded fine (see Gotchas).
+View the PNGs with the `Read` tool. **Always actually look at them** — `networkidle` can return before Chart.js paints the canvas. Use `wait-shot.mjs` (1.5s extra wait + Chart instance check) when chart rendering matters.
 
 ### Trigger interesting state via the API
 
@@ -110,7 +113,7 @@ pkill -f "python fx_app.py"
 
 - **`pkill` from a `Bash` tool call kills the app you backgrounded in the same call.** A `nohup ... & disown` pattern is required; if you also `pkill` later in the same Bash invocation the tool harness will reap the new process. Put the launch in one Bash call, the verification curls in another.
 - **Mock fallback is the default success path here, not a regression.** With `FX_FEED_SOURCE=mock` (the default) no live HTTP happens at all. With `FX_FEED_SOURCE=exchangerate_host` the live call reaches exchangerate.host but is rejected with `missing_access_key` (HTTP egress *does* work in this sandbox, contrary to a hint in CLAUDE.md — but the API requires a paid access key). Either way `monitoring/fx_feed.py` catches the exception, logs `falling back to mock`, and returns mock rates. Look for that exact substring in `/tmp/fx_app.log` to confirm the resilience path ran.
-- **Charts can render blank in screenshots.** `chart.js` populates `<canvas>` elements after `networkidle` fires. The structural elements (title, nav, cards, tables) are always populated server-side and will appear. If you specifically need a chart to render, add a `page.waitForFunction(() => window.dashboardChartsReady)` or sleep before the screenshot.
+- **Chart.js is bundled locally** at `static/fx/js/chart.umd.js` + `chartjs-adapter-date-fns.bundle.min.js`. The base template loads them with `defer` so they run before `DOMContentLoaded`. This means screenshots in any environment (including this sandbox where outbound HTTPS to jsdelivr is blocked) render charts correctly — provided you wait long enough after page load (use `wait-shot.mjs` with its 1.5s extra wait).
 - **Two static-url prefixes.** Templates load assets from `/fx/fx/static/...` (the blueprint's `static_url_path="/fx/static"` is itself nested under the `/fx` blueprint mount). That's correct; don't "fix" it.
 - **The `/` route is the legacy Outlook-to-PDF converter, not FX.** Always navigate directly to `/fx/`. The two apps share the Flask process; they are unrelated per CLAUDE.md.
 - **`fx_app.py` imports `app` at startup** to mount the legacy converter alongside FX. If the legacy converter's deps (weasyprint, RTFDE…) aren't installed, the import fails silently and `base_app` becomes a bare Flask. That's fine for driving `/fx/` — but the converter routes will 404.

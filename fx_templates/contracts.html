@@ -7,7 +7,7 @@
 </div>
 
 <div class="upload-card">
-    <h3>Upload New Contract</h3>
+    <h2>Upload New Contract</h2>
     <form id="upload-form" enctype="multipart/form-data">
         <div class="form-row">
             <div class="form-group">
@@ -29,7 +29,7 @@
 </div>
 
 <div class="table-card">
-    <h3>All Contracts</h3>
+    <h2>All Contracts</h2>
     <table class="fx-table">
         <thead>
             <tr>
@@ -83,14 +83,17 @@ async function loadContracts() {
         const contracts = await resp.json();
         const tbody = document.getElementById('contracts-table');
         if (contracts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">No contracts uploaded yet</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+                <div class="empty-state-title">No contracts yet</div>
+                <div class="empty-state-hint">Upload a PDF or DOCX contract above to extract its FX clauses.</div>
+            </td></tr>`;
         } else {
             tbody.innerHTML = contracts.map(c => `
                 <tr>
                     <td>${parseInt(c.id)}</td>
                     <td>${esc(c.customer_name)}</td>
                     <td>${esc(c.contract_reference)}</td>
-                    <td><span class="status-badge status-${esc(c.status)}">${esc(c.status)}</span></td>
+                    <td><span class="status-badge status-${esc(c.status)}">${esc(humanizeStatus(c.status))}</span></td>
                     <td>${parseInt(c.clause_count)}</td>
                     <td>${new Date(c.created_at).toLocaleDateString()}</td>
                     <td><a href="/fx/contracts/${parseInt(c.id)}" class="btn btn-sm">View</a></td>

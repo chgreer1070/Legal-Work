@@ -88,13 +88,9 @@ Shows one contract's metadata and its extracted FX clauses.
 
 **Route:** `GET /fx/alerts` -- `fx/routes/alerts.py:15`
 
-**Empty state (fresh DB, no threshold breaches):**
+![Alerts](fx-ui-screenshots/04-alerts-list.png)
 
-![Alerts Empty](fx-ui-screenshots/04-alerts-list-empty.png)
-
-**With data (after a threshold breach or manual alert creation):**
-
-![Alerts Populated](fx-ui-screenshots/04-alerts-list.png)
+When there are no alerts (fresh DB or filter with no matches), the empty state shows a helpful hint pointing to **Refresh Rates** on the dashboard.
 
 **Visible elements:**
 
@@ -282,7 +278,7 @@ What each page shows on a fresh seeded database vs. after data has been populate
 | Page | Fresh DB | After population |
 |---|---|---|
 | Dashboard cards | 3 contracts, 0 alerts, $0 exposure, 0 sent | Numbers reflect actual DB state |
-| Dashboard charts | Blank canvas (rate history exists but Chart.js may not render at `networkidle`) | Line chart with 3 pairs, doughnut with exposure by pair |
+| Dashboard charts | Friendly "No rate data yet" / "No exposure yet" overlay with action hint | Line chart with 3 pairs, doughnut with exposure by pair |
 | Contracts | 3 seeded contracts (Acme, GlobalTech, Sunrise) | Same + any uploaded contracts |
 | Contract Detail | Extracted clauses from seed (Claude-mocked confidence scores) | Real Claude-extracted clauses if API key is set |
 | Alerts | "No alerts found" | Populated after `POST /api/rates/refresh` triggers a breach |
@@ -339,7 +335,7 @@ node $DRIVER shot http://localhost:5000/fx/audit docs/fx-ui-screenshots/07-audit
 
 ## Gotchas
 
-- **Chart.js renders after `networkidle`.** Playwright screenshots taken at `networkidle` often show blank `<canvas>` elements because Chart.js paints asynchronously. The structural content (cards, tables, text) is always present. If you need chart screenshots, add a `page.waitForTimeout(500)` or check for `window.dashboardChartsReady`.
+- **Chart.js is bundled locally** at `static/fx/js/chart.umd.js` (no CDN). This makes charts render in environments where outbound HTTPS is blocked. Playwright still needs a short wait after `networkidle` for the canvas paint — use `.claude/skills/run-fx/wait-shot.mjs` which adds 1.5s and reports chart-instance state.
 - **The `/fx/fx/static/...` double prefix is intentional.** The blueprint sets `static_url_path="/fx/static"` and is mounted at `/fx`, producing `/fx/fx/static/...`. Changing either side breaks asset loading.
 - **`/` is the legacy converter, not FX.** Always navigate to `/fx/` for the FX system.
 - **Without `ANTHROPIC_API_KEY`, Generate Notification fails.** The alert stays in `triggered` status and the API returns an error. In production, a real key would let Claude draft the email. In this sandbox, advance the state directly via the DB or API if needed.

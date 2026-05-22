@@ -7,10 +7,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 OUTDIR="$REPO_ROOT/docs/fx-ui-screenshots"
-DRIVER="$REPO_ROOT/.claude/skills/run-fx/driver.mjs"
+WAIT_SHOT="$REPO_ROOT/.claude/skills/run-fx/wait-shot.mjs"
 BASE="http://localhost:5000"
 
-shot() { node "$DRIVER" shot "$1" "$2" >/dev/null && echo "  captured $2"; }
+# wait-shot includes a 1.5s post-networkidle pause so Chart.js canvases paint.
+shot() { node "$WAIT_SHOT" "$1" "$2" >/dev/null && echo "  captured $2"; }
 
 echo "Capturing FX UI screenshots..."
 
