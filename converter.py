@@ -12,6 +12,7 @@ Handles:
 
 import html
 import os
+import logging
 import re
 import shutil
 import subprocess
@@ -19,6 +20,8 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 import extract_msg
 import mammoth
@@ -91,7 +94,8 @@ def _stamp_pdf_metadata(src: Path, dest: Path, meta: dict):
 
         with open(dest, "wb") as f:
             writer.write(f)
-    except Exception:
+    except Exception as e:
+        logger.warning("PDF metadata stamping failed: %s", e)
         shutil.copy2(src, dest)
 
 
@@ -353,7 +357,8 @@ def _docx_to_pdf(src: Path, output_dir: Path, meta: dict) -> Optional[Path]:
         tmp_path.unlink(missing_ok=True)
 
         return dest
-    except Exception:
+    except Exception as e:
+        logger.warning("Document conversion failed: %s", e)
         return None
 
 
@@ -452,7 +457,8 @@ def _pptx_to_pdf(src: Path, output_dir: Path, meta: dict) -> Optional[Path]:
         tmp_path.unlink(missing_ok=True)
 
         return dest
-    except Exception:
+    except Exception as e:
+        logger.warning("PPTX conversion failed: %s", e)
         return None
 
 
