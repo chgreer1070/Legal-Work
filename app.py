@@ -85,12 +85,22 @@ def _cleanup_expired_jobs():
                 _jobs.pop(jid, None)
 
 
+def _cleanup_stale_rate_keys():
+    """Remove rate-limit entries for IPs with no recent requests."""
+    now = time.time()
+    with _rate_lock:
+        stale = [k for k, ts in _rate_store.items() if not ts or all(now - t >= 60 for t in ts)]
+        for k in stale:
+            del _rate_store[k]
+
+
 def _start_cleanup_thread():
-    """Background thread that periodically removes expired jobs."""
+    """Background thread that periodically removes expired jobs and stale rate keys."""
     def _run():
         while True:
             time.sleep(300)  # Run every 5 minutes
             _cleanup_expired_jobs()
+            _cleanup_stale_rate_keys()
     t = threading.Thread(target=_run, daemon=True)
     t.start()
 
