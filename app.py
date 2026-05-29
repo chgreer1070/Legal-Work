@@ -10,23 +10,28 @@ GET  /jobs          List recent conversion jobs (JSON)
 """
 
 import json
+import logging
 import os
 import shutil
 import tempfile
 import threading
+import time
 import uuid
 import zipfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from flask import (
     Flask,
+    after_this_request,
     jsonify,
     render_template,
     request,
     send_file,
     url_for,
 )
+
+logger = logging.getLogger(__name__)
 
 from converter import convert_standalone, msg_to_pdf
 
@@ -40,6 +45,38 @@ ALLOWED_EXT = {".msg", ".pdf", ".doc", ".docx", ".ppt", ".pptx"}
 # In-memory job store: { job_id: { status, message, files, created_at } }
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
+_MAX_JOBS = 1000
+_JOB_TTL_SECONDS = 3600  # 1 hour
+
+
+def _cleanup_expired_jobs():
+    """Remove jobs older than _JOB_TTL_SECONDS and enforce max store size."""
+    now = time.time()
+    with _jobs_lock:
+        expired = [
+            jid for jid, data in _jobs.items()
+            if now - data.get("_created_ts", 0) > _JOB_TTL_SECONDS
+        ]
+        for jid in expired:
+            _jobs.pop(jid, None)
+        # Enforce max size by removing oldest jobs
+        if len(_jobs) > _MAX_JOBS:
+            sorted_jobs = sorted(_jobs.items(), key=lambda x: x[1].get("_created_ts", 0))
+            for jid, _ in sorted_jobs[: len(_jobs) - _MAX_JOBS]:
+                _jobs.pop(jid, None)
+
+
+def _start_cleanup_thread():
+    """Background thread that periodically removes expired jobs."""
+    def _run():
+        while True:
+            time.sleep(300)  # Run every 5 minutes
+            _cleanup_expired_jobs()
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+
+_start_cleanup_thread()
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -155,10 +192,12 @@ def convert():
         shutil.rmtree(job_dir, ignore_errors=True)
         return jsonify({"error": "No supported files uploaded", "rejected": rejected}), 400
 
+    _cleanup_expired_jobs()
     with _jobs_lock:
         _jobs[job_id] = {
             "status":     "processing",
-            "created_at": datetime.utcnow().isoformat() + "Z",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "_created_ts": time.time(),
             "files":      [p.name for p in saved],
             "results":    [],
             "errors":     [],
@@ -204,6 +243,14 @@ def download(job_id: str):
         for path in out_dir.rglob("*"):
             if path.is_file():
                 zf.write(path, path.relative_to(out_dir))
+
+    @after_this_request
+    def _cleanup(response):
+        try:
+            zip_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        return response
 
     return send_file(
         zip_path,
