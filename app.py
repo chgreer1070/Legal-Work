@@ -192,8 +192,8 @@ def convert():
         shutil.rmtree(job_dir, ignore_errors=True)
         return jsonify({"error": "No supported files uploaded", "rejected": rejected}), 400
 
+    _cleanup_expired_jobs()
     with _jobs_lock:
-        _cleanup_expired_jobs()
         _jobs[job_id] = {
             "status":     "processing",
             "created_at": datetime.now(timezone.utc).isoformat(),
