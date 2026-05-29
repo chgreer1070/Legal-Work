@@ -42,6 +42,25 @@ UPLOAD_DIR  = Path("uploads")
 OUTPUT_DIR  = Path("output")
 ALLOWED_EXT = {".msg", ".pdf", ".doc", ".docx", ".ppt", ".pptx"}
 
+# ── rate limiting ─────────────────────────────────────────────────────────────
+
+_RATE_LIMIT = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "10"))
+_rate_store: dict[str, list[float]] = {}
+_rate_lock = threading.Lock()
+
+
+def _is_rate_limited(key: str) -> bool:
+    """Return True if *key* has exceeded _RATE_LIMIT requests in the last 60s."""
+    now = time.time()
+    with _rate_lock:
+        timestamps = _rate_store.setdefault(key, [])
+        timestamps[:] = [t for t in timestamps if now - t < 60]
+        if len(timestamps) >= _RATE_LIMIT:
+            return True
+        timestamps.append(now)
+        return False
+
+
 # In-memory job store: { job_id: { status, message, files, created_at } }
 _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
@@ -164,6 +183,9 @@ def dashboard():
 
 @app.route("/convert", methods=["POST"])
 def convert():
+    if _is_rate_limited(request.remote_addr or "unknown"):
+        return jsonify({"error": "Rate limit exceeded. Try again later."}), 429
+
     if "files" not in request.files:
         return jsonify({"error": "No files provided"}), 400
 
