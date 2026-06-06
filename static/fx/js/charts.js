@@ -19,6 +19,7 @@ async function loadRateChart() {
     const results = await Promise.all(pairs.map(async (pair) => {
         try {
             const resp = await fetch(`/fx/api/rates/${pair}/history?days=90`);
+            if (!resp.ok) return { pair, data: [] };
             return { pair, data: await resp.json() };
         } catch (e) {
             console.error(`Rate chart error for ${pair}:`, e);

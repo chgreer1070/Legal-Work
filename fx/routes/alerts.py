@@ -94,7 +94,7 @@ def api_generate_notification(alert_id: int):
                 adjustment_method=clause.adjustment_method,
                 clause_text=clause.clause_text or "",
                 volume=total_volume,
-                exposure_amount=float(alert.exposure_amount),
+                exposure_amount=float(alert.exposure_amount or 0),
                 notification_period_days=clause.notification_period_days,
                 alert_id=alert_id,
             )

@@ -66,9 +66,9 @@ def forecast_threshold_crossing(
 
         crossing_prob = max(0.0, min(1.0, crossing_prob))
 
-        # Confidence interval (1 sigma around current rate)
+        # Confidence interval (1 sigma around trend-adjusted expected rate)
         current_rate = float(values[-1])
-        confidence_lower = current_rate * (1.0 + expected_move - horizon_std)
+        confidence_lower = max(0.0, current_rate * (1.0 + expected_move - horizon_std))
         confidence_upper = current_rate * (1.0 + expected_move + horizon_std)
 
         prediction = Prediction(
