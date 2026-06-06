@@ -68,8 +68,8 @@ def forecast_threshold_crossing(
 
         # Confidence interval (1 sigma around current rate)
         current_rate = float(values[-1])
-        confidence_lower = current_rate * (1.0 - horizon_std)
-        confidence_upper = current_rate * (1.0 + horizon_std)
+        confidence_lower = current_rate * (1.0 + expected_move - horizon_std)
+        confidence_upper = current_rate * (1.0 + expected_move + horizon_std)
 
         prediction = Prediction(
             currency_pair=currency_pair,

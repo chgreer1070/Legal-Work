@@ -144,7 +144,7 @@ class Alert(Base):
             "base_rate": float(self.base_rate),
             "current_rate": float(self.current_rate),
             "deviation_pct": float(self.deviation_pct),
-            "exposure_amount": float(self.exposure_amount),
+            "exposure_amount": float(self.exposure_amount or 0),
             "status": self.status,
             "notification_text": self.notification_text,
             "created_at": self.created_at.isoformat() if self.created_at else None,

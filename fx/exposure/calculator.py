@@ -63,7 +63,7 @@ def get_total_exposure_by_pair() -> dict[str, float]:
         exposure_by_pair = {}
         for alert in alerts:
             pair = alert.currency_pair
-            exposure_by_pair[pair] = exposure_by_pair.get(pair, 0.0) + float(alert.exposure_amount)
+            exposure_by_pair[pair] = exposure_by_pair.get(pair, 0.0) + float(alert.exposure_amount or 0)
         return exposure_by_pair
     finally:
         session.close()

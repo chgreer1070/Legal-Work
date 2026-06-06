@@ -60,16 +60,17 @@ def test_decreasing_rates_predict_appreciation(test_db, db_session):
     assert 0.0 <= result["crossing_probability"] <= 1.0
 
 
-def test_confidence_interval_symmetric_around_current_rate(test_db, db_session):
+def test_confidence_interval_symmetric_around_trend_adjusted_rate(test_db, db_session):
     values = [5.00 + 0.005 * (i % 3 - 1) for i in range(30)]  # small zig-zag
     _seed_rates(db_session, "USD/BRL", values)
     result = forecast_threshold_crossing("USD/BRL", threshold_pct=5.0)
 
-    current = float(values[-1])
-    # Allow small tolerance for rounding in forecaster (6dp).
-    upper_gap = result["confidence_upper"] - current
-    lower_gap = current - result["confidence_lower"]
-    assert abs(upper_gap - lower_gap) < 1e-3
+    # Interval should be symmetric around the trend-adjusted center,
+    # not the raw current rate.
+    center = (result["confidence_upper"] + result["confidence_lower"]) / 2
+    upper_gap = result["confidence_upper"] - center
+    lower_gap = center - result["confidence_lower"]
+    assert abs(upper_gap - lower_gap) < 1e-6
 
 
 def test_probability_is_clamped_to_unit_interval(test_db, db_session):

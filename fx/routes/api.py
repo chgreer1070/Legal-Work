@@ -38,7 +38,7 @@ def dashboard_summary():
             .filter(Alert.status.in_(["triggered", "pending_approval"]))
             .all()
         )
-        total_exposure = sum(float(a.exposure_amount) for a in alerts)
+        total_exposure = sum(float(a.exposure_amount or 0) for a in alerts)
 
         return jsonify({
             "active_contracts": active_contracts,

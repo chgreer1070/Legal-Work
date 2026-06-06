@@ -16,26 +16,29 @@ async function loadRateChart() {
     const pairs = ['USD/BRL', 'USD/MXN', 'USD/CNY'];
     const datasets = [];
 
-    for (const pair of pairs) {
+    const results = await Promise.all(pairs.map(async (pair) => {
         try {
             const resp = await fetch(`/fx/api/rates/${pair}/history?days=90`);
-            const data = await resp.json();
-            if (data.length === 0) continue;
-
-            const colors = PAIR_COLORS[pair] || { line: '#95a5a6', bg: 'rgba(149,165,166,0.1)' };
-            datasets.push({
-                label: pair,
-                data: data.map(d => ({ x: d.fetched_at, y: d.rate })),
-                borderColor: colors.line,
-                backgroundColor: colors.bg,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 0,
-                borderWidth: 2,
-            });
+            return { pair, data: await resp.json() };
         } catch (e) {
             console.error(`Rate chart error for ${pair}:`, e);
+            return { pair, data: [] };
         }
+    }));
+
+    for (const { pair, data } of results) {
+        if (data.length === 0) continue;
+        const colors = PAIR_COLORS[pair] || { line: '#95a5a6', bg: 'rgba(149,165,166,0.1)' };
+        datasets.push({
+            label: pair,
+            data: data.map(d => ({ x: d.fetched_at, y: d.rate })),
+            borderColor: colors.line,
+            backgroundColor: colors.bg,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+        });
     }
 
     if (rateChartInstance) rateChartInstance.destroy();
@@ -88,6 +91,7 @@ async function loadExposureChart() {
         const pairs = Object.keys(data);
         const wrap = canvas.parentElement;
         wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+        if (exposureChartInstance) { exposureChartInstance.destroy(); exposureChartInstance = null; }
 
         if (pairs.length === 0) {
             const empty = document.createElement('div');
@@ -98,8 +102,6 @@ async function loadExposureChart() {
         }
 
         const colors = pairs.map(p => (PAIR_COLORS[p] || { line: '#95a5a6' }).line);
-
-        if (exposureChartInstance) exposureChartInstance.destroy();
 
         exposureChartInstance = new Chart(canvas, {
             type: 'doughnut',
