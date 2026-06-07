@@ -1,0 +1,63 @@
+name,category,keywords,recommended_style,layout,description
+Social Media Feed,Entertainment,social feed timeline content sharing,Flat Modern,scroll-feed with stories bar,Content-first infinite scroll with engagement-optimized card layouts
+Video Streaming,Entertainment,video streaming media player entertainment,Dark Immersive,full-bleed hero with carousel rows,Dark theme with edge-to-edge media and horizontal browsing rows
+Music Player,Entertainment,music audio player streaming playlist,Glassmorphism Dark,album-art backdrop with blur panels,Translucent overlays on dynamic album art backgrounds
+Gaming Dashboard,Entertainment,gaming esports leaderboard stats,Cyberpunk Neon,grid dashboard with stat cards,High-contrast neon accents on dark backgrounds with data-dense layouts
+Photo Gallery,Entertainment,photo gallery grid masonry image,Minimalism,masonry grid with lightbox,Clean grid layout with focus on image content and smooth transitions
+Podcast App,Entertainment,podcast audio episodes series,Minimalism Warm,list with player bar,Warm neutral tones with persistent bottom player and episode lists
+Live Streaming,Entertainment,live stream broadcast chat,Dark Immersive,full-screen player with overlay chat,Real-time interaction overlay on full-bleed video
+News Reader,Entertainment,news articles reading feed media,Editorial Clean,card-based feed with categories,Typography-forward design with clear content hierarchy
+E-commerce Store,Commerce,ecommerce shop retail products,Modern Clean,grid catalog with filters,Product-focused grid with faceted navigation and quick-view cards
+Marketplace,Commerce,marketplace buy sell listings peer,Modern Flat,listing grid with map view,Two-panel layout combining browsable listings with geographic context
+Food Delivery,Commerce,food delivery restaurant ordering,Vibrant Playful,restaurant cards with cart drawer,Appetizing imagery with bold CTAs and persistent cart summary
+Fashion Store,Commerce,fashion clothing luxury brand apparel,Minimalism Elegant,lookbook with product detail,Editorial-style imagery with generous whitespace and refined typography
+Grocery App,Commerce,grocery supermarket fresh produce,Fresh Clean,categorized list with cart,Clean category navigation with efficient list-based product browsing
+Booking Platform,Commerce,booking reservation hotel travel,Modern Trust,search-first with calendar picker,Search-dominant landing with date pickers and trust signals
+Auction Platform,Commerce,auction bidding collectibles,Bold Dynamic,countdown cards with bid panels,Urgency-driven design with timers and real-time bid updates
+Subscription Box,Commerce,subscription recurring box curated,Playful Branded,showcase with unboxing flow,Brand-storytelling layout with visual product reveals
+SaaS Dashboard,Tool,saas dashboard analytics metrics business,Minimalism Professional,sidebar nav with metric cards,Clean dashboard with KPI cards data tables and chart widgets
+Project Management,Tool,project task kanban board team,Flat Functional,kanban columns with detail drawer,Board-based layout with drag-drop cards and slide-out details
+CRM Platform,Tool,crm customer relationship sales pipeline,Professional Clean,pipeline view with contact cards,Multi-view layout supporting pipeline board list and detail views
+Email Client,Tool,email inbox messaging communication,Minimalism Functional,three-panel layout,Classic three-panel with folder tree message list and reading pane
+Calendar App,Tool,calendar scheduling events planner,Clean Modern,week/month grid with event modal,Grid-based temporal layout with color-coded events and quick create
+Note Taking,Tool,notes editor writing markdown,Minimalism Focused,sidebar with editor pane,Distraction-free writing with collapsible sidebar navigation
+File Manager,Tool,files storage documents cloud drive,Flat Clean,grid/list toggle with breadcrumbs,Dual-view file browser with breadcrumb navigation and preview pane
+Code Editor,Tool,code ide editor developer programming,Dark Professional,multi-panel with terminal,Dark theme multi-panel layout with syntax highlighting and integrated terminal
+Scanner App,Tool,scanner document ocr camera,Minimalism,camera view with crop overlay,Full-screen camera with guide overlay and post-capture editing
+Weather App,Tool,weather forecast climate temperature,Glassmorphism,location-based with hourly scroll,Dynamic backgrounds with frosted-glass data panels
+Calculator,Tool,calculator math finance converter,Flat Minimal,keypad with display,Simple grid keypad with clear display and history drawer
+Fitness Tracker,Health,fitness workout exercise gym health,Bold Energetic,activity rings with workout list,Motivational design with progress visualization and workout logging
+Health Monitor,Health,health medical vitals monitoring patient,Clean Professional,vital-signs dashboard,Clinical accuracy with clear data visualization and alert states
+Meditation App,Health,meditation mindfulness calm wellness,Soft Organic,breathing circle with session list,Calming gradients with organic shapes and guided session flow
+Nutrition Tracker,Health,nutrition diet calories food tracking,Fresh Modern,meal log with macros chart,Food-forward imagery with clear nutritional data breakdown
+Sleep Tracker,Health,sleep monitor rest circadian,Dark Calm,sleep chart with insights,Dark restful interface with hypnogram visualization
+Mental Health,Health,mental health mood journal therapy,Soft Warm,mood logger with insights,Gentle empathetic design with mood tracking and journaling
+Banking App,Finance,banking finance money account,Minimalism Trust,account overview with transactions,Trust-oriented design with clear balance display and transaction history
+Investment Portfolio,Finance,investment stocks trading portfolio,Professional Dark,watchlist with charts,Data-rich dark interface with real-time charts and portfolio metrics
+Crypto Exchange,Finance,crypto cryptocurrency blockchain trading,Cyberpunk Modern,trading view with order book,High-information-density dark layout with candlestick charts
+Budget Planner,Finance,budget money planning savings expense,Clean Friendly,category breakdown with goals,Approachable design with spending visualization and goal tracking
+Payment App,Finance,payment transfer send money p2p,Minimalism Bold,contact list with amount input,Simple focused flow with large amount display and quick-send contacts
+Insurance App,Finance,insurance policy claims coverage,Professional Trust,policy cards with claim flow,Conservative trustworthy design with clear policy summaries
+Learning Platform,Education,learning education courses online lms,Modern Friendly,course catalog with progress,Engaging catalog layout with progress tracking and video lessons
+Language Learning,Education,language learning vocabulary practice,Gamified Playful,lesson path with streak counter,Game-inspired progression with streaks rewards and bite-sized lessons
+Kids Education,Education,kids children education learning fun,Colorful Playful,illustrated scenes with activities,Bright illustrated design with large touch targets and sound feedback
+Exam Prep,Education,exam test preparation quiz study,Clean Focused,question view with timer,Distraction-free question layout with progress and time management
+Recipe App,Lifestyle,recipe cooking food kitchen meal,Warm Editorial,recipe card with step view,Appetizing photography with clear step-by-step instructions
+Travel Guide,Lifestyle,travel guide destination explore tourism,Visual Rich,photo-hero with itinerary list,Stunning destination imagery with organized itinerary and maps
+Real Estate,Lifestyle,real estate property home housing,Modern Clean,listing grid with map,Photo-forward property cards with map integration and filters
+Dating App,Lifestyle,dating social matching profile,Bold Playful,card stack with profile detail,Swipe-based card interface with rich profile displays
+Pet Care,Lifestyle,pet animal care veterinary,Soft Friendly,pet profile with activity log,Warm friendly design with pet profiles and care scheduling
+Event Ticketing,Lifestyle,event ticket concert festival,Bold Dynamic,event cards with seat picker,Eye-catching event imagery with smooth booking flow
+Ride Sharing,Transport,ride sharing taxi driver navigation,Clean Functional,map-centric with pickup flow,Map-dominant interface with clear pickup/dropoff flow
+Parking Finder,Transport,parking spot finder urban,Simple Functional,map with availability overlay,Real-time map with color-coded availability markers
+Admin Panel,Tool,admin panel management backend,Flat Professional,sidebar nav with data tables,Functional layout prioritizing data density and batch operations
+Blog Platform,Content,blog writing publishing articles cms,Editorial Minimalism,article reader with author sidebar,Typography-focused reading experience with author context
+Portfolio Site,Content,portfolio showcase creative work,Minimalism Elegant,project grid with case study detail,Refined grid showcasing work samples with detailed case studies
+Landing Page Builder,Tool,landing page builder conversion,Modern Conversion,section-based with CTA flow,Conversion-optimized modular sections with clear value proposition
+Chat Messaging,Communication,chat messaging instant communication,Flat Modern,conversation list with chat view,Familiar messaging layout with conversation threading and rich media
+Video Conferencing,Communication,video call conference meeting remote,Clean Functional,grid gallery with controls bar,Multi-participant video grid with floating controls and screen share
+Community Forum,Communication,forum community discussion board,Clean Readable,thread list with nested replies,Readable threaded discussions with voting and moderation tools
+Warehouse Management,Enterprise,warehouse inventory logistics supply chain,Functional Dense,scannable list with bin locations,High-density operational layout optimized for barcode scanning workflows
+HR Platform,Enterprise,hr human resources employee onboarding,Professional Warm,employee directory with workflow,People-focused design with onboarding checklists and org navigation
+Analytics Platform,Enterprise,analytics data visualization reporting bi,Professional Clean,widget dashboard with drill-down,Configurable dashboard with drag-arrange widgets and data drill-down
+IoT Dashboard,Enterprise,iot devices sensors monitoring smart,Technical Modern,device grid with telemetry charts,Real-time device monitoring with status indicators and telemetry graphs
