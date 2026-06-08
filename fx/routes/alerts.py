@@ -70,6 +70,8 @@ def api_generate_notification(alert_id: int):
 
         clause = session.query(FXClause).filter(FXClause.id == alert.clause_id).first()
         contract = session.query(Contract).filter(Contract.id == alert.contract_id).first()
+        if not clause or not contract:
+            return jsonify({"error": "Associated contract or clause not found"}), 404
 
         # Get transaction volume
         transactions = (
@@ -80,7 +82,7 @@ def api_generate_notification(alert_id: int):
             )
             .all()
         )
-        total_volume = sum(float(t.volume) for t in transactions) if transactions else 1000000.0
+        total_volume = sum(float(t.volume or 0) for t in transactions) if transactions else 1000000.0
 
         try:
             notification_text = generate_notification(

@@ -8,9 +8,7 @@ react, web, prompt.
 
 import argparse
 import csv
-import os
 import sys
-import textwrap
 from pathlib import Path
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
@@ -32,8 +30,6 @@ DOMAINS = {
 STACKS = {
     "react-native": "react.csv",
 }
-
-DESIGN_SYSTEM_DOMAINS = ["product", "style", "color", "typography", "landing"]
 
 
 def load_csv(filename):
@@ -67,10 +63,6 @@ def search_rows(rows, query, max_results=10):
             scored.append((s, row))
     scored.sort(key=lambda x: -x[0])
     return [row for _, row in scored[:max_results]]
-
-
-def wrap_text(text, width=60):
-    return "\n".join(textwrap.wrap(text, width=width))
 
 
 def box_line(label, value, width=72):
@@ -118,24 +110,30 @@ def pick_best(rows, query, fallback_index=0):
     return rows[fallback_index] if rows else {}
 
 
+def _load_design_system_data(query):
+    product = pick_best(load_csv(DOMAINS["product"]), query)
+    style = pick_best(load_csv(DOMAINS["style"]), query)
+    color = pick_best(load_csv(DOMAINS["color"]), query)
+    typo = pick_best(load_csv(DOMAINS["typography"]), query)
+    landing = pick_best(load_csv(DOMAINS["landing"]), query)
+    return product, style, color, typo, landing
+
+
 def generate_design_system(query, project_name=None, fmt="ascii"):
-    product_rows = load_csv(DOMAINS["product"])
-    style_rows = load_csv(DOMAINS["style"])
-    color_rows = load_csv(DOMAINS["color"])
-    typo_rows = load_csv(DOMAINS["typography"])
-    landing_rows = load_csv(DOMAINS["landing"])
-
-    product = pick_best(product_rows, query)
-    style = pick_best(style_rows, query)
-    color = pick_best(color_rows, query)
-    typo = pick_best(typo_rows, query)
-    landing = pick_best(landing_rows, query)
-
+    data = _load_design_system_data(query)
     title = project_name or "Design System"
-
     if fmt == "markdown":
-        return format_design_system_markdown(title, product, style, color, typo, landing)
-    return format_design_system_ascii(title, product, style, color, typo, landing)
+        return format_design_system_markdown(title, *data)
+    return format_design_system_ascii(title, *data)
+
+
+def format_design_system(query, project_name=None):
+    data = _load_design_system_data(query)
+    title = project_name or "Design System"
+    return {
+        "ascii": format_design_system_ascii(title, *data),
+        "markdown": format_design_system_markdown(title, *data),
+    }
 
 
 def format_design_system_ascii(title, product, style, color, typo, landing):
@@ -254,19 +252,12 @@ def main():
         sys.exit(1)
 
     if args.design_system:
-        output = generate_design_system(
-            args.query,
-            project_name=args.project,
-            fmt=args.format,
-        )
-        print(output)
         if args.persist:
-            md_output = generate_design_system(
-                args.query,
-                project_name=args.project,
-                fmt="markdown",
-            )
-            persist_design_system(md_output, args.project or "Project", page=args.page)
+            both = format_design_system(args.query, project_name=args.project)
+            print(both[args.format])
+            persist_design_system(both["markdown"], args.project or "Project", page=args.page)
+        else:
+            print(generate_design_system(args.query, project_name=args.project, fmt=args.format))
         return
 
     if args.domain:

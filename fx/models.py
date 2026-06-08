@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -117,7 +118,7 @@ class Alert(Base):
     base_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     current_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     deviation_pct: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False)
-    exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=0)
+    exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=0, server_default=text("0"))
     status: Mapped[str] = mapped_column(String(50), default="triggered")
     notification_text: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())

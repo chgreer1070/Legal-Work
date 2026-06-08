@@ -55,7 +55,7 @@ async function loadPredictions() {
                     </td>
                     <td>${p.predicted_direction}</td>
                     <td>${p.horizon_days} days</td>
-                    <td>${p.confidence_lower ? p.confidence_lower.toFixed(4) + ' - ' + p.confidence_upper.toFixed(4) : '--'}</td>
+                    <td>${p.confidence_lower != null ? p.confidence_lower.toFixed(4) + ' - ' + p.confidence_upper.toFixed(4) : '--'}</td>
                     <td>${p.model_version}</td>
                     <td>${p.prediction_date || '--'}</td>
                 </tr>

@@ -37,7 +37,7 @@ def calculate_exposure(
         if not transactions:
             return Decimal("0")
 
-        total_volume = sum(t.volume for t in transactions)
+        total_volume = sum(t.volume or 0 for t in transactions)
 
         # Volume in USD * |rate change| = USD exposure from FX movement
         rate_delta = abs(current_rate - base_rate)

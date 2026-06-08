@@ -9,6 +9,14 @@ const PAIR_COLORS = {
 let rateChartInstance = null;
 let exposureChartInstance = null;
 
+function setChartEmpty(wrap, title, hint) {
+    wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.innerHTML = `<div class="empty-state-title">${title}</div><div class="empty-state-hint">${hint}</div>`;
+    wrap.appendChild(empty);
+}
+
 async function loadRateChart() {
     const canvas = document.getElementById('rateChart');
     if (!canvas) return;
@@ -44,15 +52,11 @@ async function loadRateChart() {
 
     if (rateChartInstance) rateChartInstance.destroy();
 
-    // Clear any prior empty-state overlay
     const wrap = canvas.parentElement;
     wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
 
     if (datasets.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'chart-empty';
-        empty.innerHTML = '<div class="empty-state-title">No rate data yet</div><div class="empty-state-hint">Click <strong>Refresh Rates</strong> to fetch the latest exchange rates.</div>';
-        wrap.appendChild(empty);
+        setChartEmpty(wrap, 'No rate data yet', 'Click <strong>Refresh Rates</strong> to fetch the latest exchange rates.');
         return;
     }
 
@@ -87,6 +91,7 @@ async function loadExposureChart() {
 
     try {
         const resp = await fetch('/fx/api/dashboard/exposure-by-pair');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
 
         const pairs = Object.keys(data);
@@ -95,10 +100,7 @@ async function loadExposureChart() {
         if (exposureChartInstance) { exposureChartInstance.destroy(); exposureChartInstance = null; }
 
         if (pairs.length === 0) {
-            const empty = document.createElement('div');
-            empty.className = 'chart-empty';
-            empty.innerHTML = '<div class="empty-state-title">No exposure yet</div><div class="empty-state-hint">Exposure appears once an alert is triggered for a currency pair.</div>';
-            wrap.appendChild(empty);
+            setChartEmpty(wrap, 'No exposure yet', 'Exposure appears once an alert is triggered for a currency pair.');
             return;
         }
 

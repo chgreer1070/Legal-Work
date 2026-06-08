@@ -64,13 +64,15 @@ def check_all_thresholds() -> list[dict]:
                 if existing:
                     continue
 
+                exposure_unavailable = False
                 try:
                     exposure = calculate_exposure(
                         clause.contract_id, pair, base_rate, current_rate, session=session
                     )
                 except Exception as e:
-                    logger.warning("Exposure calc failed for clause %d (%s), defaulting to 0: %s", clause.id, pair, e)
+                    logger.error("Exposure calc failed for clause %d (%s): %s", clause.id, pair, e)
                     exposure = Decimal("0")
+                    exposure_unavailable = True
 
                 alert = Alert(
                     clause_id=clause.id,
@@ -97,6 +99,7 @@ def check_all_thresholds() -> list[dict]:
                         "deviation_pct": float(deviation_pct),
                         "threshold_pct": float(clause.threshold_pct),
                         "exposure_amount": float(exposure),
+                        "exposure_unavailable": exposure_unavailable,
                     },
                     session=session,
                 )
