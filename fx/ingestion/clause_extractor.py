@@ -7,12 +7,13 @@ import logging
 
 import anthropic
 
-from fx.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, CLAUSE_EXTRACTION_MAX_TOKENS
+from fx.config import CLAUDE_MODEL, CLAUSE_EXTRACTION_MAX_TOKENS
 from fx.ingestion.schema import FXClauseSchema, ExtractionResult
 from fx.audit.logger import log_event
 
 SYSTEM_PROMPT = """You are a legal contract analyst specializing in foreign exchange adjustment clauses.
-You extract structured data from contract text with high precision. Always return valid JSON."""
+You extract structured data from contract text with high precision, including translating the
+contract's adjustment mechanics into a precise arithmetic formula. Always return valid JSON."""
 
 EXTRACTION_PROMPT = """Extract all foreign exchange (FX) adjustment clauses from this contract text.
 
@@ -24,13 +25,72 @@ For each FX clause found, identify:
 - adjustment_method: How adjustments are applied ("full_passthrough", "shared", "capped")
 - notification_period_days: Required notice period in days before adjustment (integer)
 - clause_text: The verbatim text of the clause from the contract
+- formula_type: The calculation structure the clause defines ("full_passthrough", "shared", "capped", "corridor", "custom")
+- formula_expression: The clause's adjustment calculation, translated into a single arithmetic expression (see rules below)
+- formula_description: One plain-English sentence describing the calculation
 - confidence_score: Your confidence in the extraction accuracy (0.0 to 1.0)
+
+FORMULA EXPRESSION RULES:
+The expression computes the USD adjustment/exposure amount for a settlement period.
+It may use ONLY:
+- variables: volume (USD transaction volume in the period), base_rate, current_rate,
+  rate_delta (current_rate - base_rate, signed), abs_rate_delta, deviation
+  ((current_rate - base_rate) / base_rate, signed fraction), abs_deviation,
+  threshold (the threshold percentage as a fraction, e.g. 0.03)
+- functions: min(), max(), abs()
+- operators: + - * / **
+- numeric literals
+
+Encode all contract-specific constants (sharing ratios, caps, corridors) as numeric
+literals taken from the clause language. Examples:
+- Full passthrough of the rate movement: "volume * abs_deviation"
+- 50/50 sharing of movement beyond a 3% corridor: "volume * max(0, abs_deviation - 0.03) * 0.5"
+- Passthrough capped at 10%: "volume * min(abs_deviation, 0.10)"
+- 60% sharing beyond a 2% corridor, capped at 8%: "volume * min(max(0, abs_deviation - 0.02) * 0.6, 0.08)"
+
+If the clause does not define a computable adjustment calculation, set formula_expression
+to "" and formula_type to your best classification of the method.
 
 Return a JSON object with a single key "clauses" containing an array of clause objects.
 If no FX clauses are found, return {"clauses": []}.
 
 CONTRACT TEXT:
 {contract_text}"""
+
+# Strict JSON schema for structured outputs — guarantees parseable responses.
+CLAUSE_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "clauses": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "currency_pair": {"type": "string"},
+                    "base_rate": {"type": "number"},
+                    "threshold_pct": {"type": "number"},
+                    "review_frequency": {"type": "string", "enum": ["monthly", "quarterly", "annual"]},
+                    "adjustment_method": {"type": "string", "enum": ["full_passthrough", "shared", "capped"]},
+                    "notification_period_days": {"type": "integer"},
+                    "clause_text": {"type": "string"},
+                    "formula_type": {"type": "string", "enum": ["full_passthrough", "shared", "capped", "corridor", "custom"]},
+                    "formula_expression": {"type": "string"},
+                    "formula_description": {"type": "string"},
+                    "confidence_score": {"type": "number"},
+                },
+                "required": [
+                    "currency_pair", "base_rate", "threshold_pct", "review_frequency",
+                    "adjustment_method", "notification_period_days", "clause_text",
+                    "formula_type", "formula_expression", "formula_description",
+                    "confidence_score",
+                ],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["clauses"],
+    "additionalProperties": False,
+}
 
 
 def extract_clauses(contract_text: str, contract_id: int | None = None) -> ExtractionResult:
@@ -39,20 +99,32 @@ def extract_clauses(contract_text: str, contract_id: int | None = None) -> Extra
 
     Returns an ExtractionResult with validated clause schemas.
     """
-    if not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not configured")
+    from fx.utils import call_claude_with_retry, get_anthropic_client
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    prompt = EXTRACTION_PROMPT.format(contract_text=contract_text)
-
-    from fx.utils import call_claude_with_retry
-    response = call_claude_with_retry(
-        client,
+    client = get_anthropic_client()
+    # Plain replace, not str.format(): the template contains literal JSON
+    # braces that format() would misread as fields (KeyError '"clauses"').
+    prompt = EXTRACTION_PROMPT.replace("{contract_text}", contract_text)
+    request_kwargs = dict(
         model=CLAUDE_MODEL,
         max_tokens=CLAUSE_EXTRACTION_MAX_TOKENS,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
+    try:
+        # Structured outputs guarantee schema-valid JSON on supporting models
+        response = call_claude_with_retry(
+            client,
+            output_config={"format": {"type": "json_schema", "schema": CLAUSE_OUTPUT_SCHEMA}},
+            **request_kwargs,
+        )
+    except anthropic.BadRequestError:
+        # Model doesn't support structured outputs — fall back to prompt-only
+        # JSON; _parse_clauses handles prose-wrapped responses.
+        logging.getLogger(__name__).warning(
+            "Structured outputs rejected by model %s; retrying without", CLAUDE_MODEL
+        )
+        response = call_claude_with_retry(client, **request_kwargs)
 
     raw_text = response.content[0].text
 

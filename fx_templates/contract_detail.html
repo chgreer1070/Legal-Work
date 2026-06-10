@@ -70,6 +70,7 @@ async function loadContract() {
                     <td>${parseInt(c.notification_period_days)}</td>
                     <td>${(Number(c.confidence_score) * 100).toFixed(0)}%</td>
                 </tr>
+                ${c.formula_expression ? `<tr><td colspan="7" class="clause-text"><strong>Exposure formula:</strong> <code>${esc(c.formula_expression)}</code>${c.formula_description ? '<br>' + esc(c.formula_description) : ''}</td></tr>` : ''}
                 ${c.clause_text ? `<tr><td colspan="7" class="clause-text">${esc(c.clause_text)}</td></tr>` : ''}
             `).join('');
         }

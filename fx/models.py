@@ -66,6 +66,9 @@ class FXClause(Base):
     adjustment_method: Mapped[str] = mapped_column(String(50), default="full_passthrough")
     notification_period_days: Mapped[int] = mapped_column(Integer, default=30)
     clause_text: Mapped[str] = mapped_column(Text, nullable=True)
+    formula_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    formula_expression: Mapped[str] = mapped_column(Text, nullable=True)
+    formula_description: Mapped[str] = mapped_column(Text, nullable=True)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0)
     extracted_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -83,6 +86,9 @@ class FXClause(Base):
             "adjustment_method": self.adjustment_method,
             "notification_period_days": self.notification_period_days,
             "clause_text": self.clause_text,
+            "formula_type": self.formula_type,
+            "formula_expression": self.formula_expression,
+            "formula_description": self.formula_description,
             "confidence_score": self.confidence_score,
             "extracted_at": self.extracted_at.isoformat() if self.extracted_at else None,
         }

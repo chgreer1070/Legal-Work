@@ -67,7 +67,8 @@ def check_all_thresholds() -> list[dict]:
                 exposure_unavailable = False
                 try:
                     exposure = calculate_exposure(
-                        clause.contract_id, pair, base_rate, current_rate, session=session
+                        clause.contract_id, pair, base_rate, current_rate,
+                        session=session, clause=clause,
                     )
                 except Exception as e:
                     logger.error("Exposure calc failed for clause %d (%s): %s", clause.id, pair, e)
