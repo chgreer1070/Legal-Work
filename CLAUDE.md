@@ -44,7 +44,7 @@ Last verified results: 0% failures across 2,596 requests, p95 22ms, p99 82ms.
 This Claude Code sandbox has constraints that look like bugs but aren't:
 
 - **No outbound HTTPS to most hosts.** The live FX feed (`FX_FEED_SOURCE=exchangerate_host`) **will always fail here** and fall back to mock. That's the designed resilience path, not a regression. Test the fallback by reading the `WARNING ... falling back to mock` log line.
-- **No GitHub API access.** `gh` CLI returns 401 (Bad credentials). PRs cannot be created from this environment — the user must create them via the GitHub web UI. The local git proxy at `127.0.0.1:*` only handles git protocol (push/pull), not the REST API.
+- **GitHub API works via the agent proxy, but repo access needs the Claude GitHub App.** `gh` is installed by the SessionStart hook. `gh api` REST calls are proxied with real auth and succeed for identity (`gh api user` → the account login), but repo operations (list/create/merge PRs) return **HTTP 403 "GitHub access is not enabled … connect the Claude GitHub App"** until an account/org admin connects the Claude GitHub App. GraphQL is **not** proxied, so high-level `gh pr`/`gh issue` commands (which use GraphQL) fail — use `gh api` REST endpoints instead. The git proxy at `127.0.0.1:*` handles push/pull for the **designated branch only** (other branches 403).
 - **No Anthropic API access by default** unless `ANTHROPIC_API_KEY` is set in the env. Clause extraction and notification generation degrade gracefully.
 
 ## Current state of the FX system
