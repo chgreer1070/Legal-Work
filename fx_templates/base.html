@@ -17,6 +17,7 @@
             <a href="{{ url_for('fx.fx_alerts.list_alerts') }}" class="{% if 'alerts' in request.endpoint %}active{% endif %}">Alerts</a>
             <a href="{{ url_for('fx.fx_dashboard.predictions') }}" class="{% if 'predictions' in request.endpoint %}active{% endif %}">Predictions</a>
             <a href="{{ url_for('fx.fx_dashboard.audit_log') }}" class="{% if 'audit' in request.endpoint %}active{% endif %}">Audit Log</a>
+            <a href="{{ url_for('fx.fx_viz.contract_3d_view') }}" class="{% if '3d' in request.path %}active{% endif %}">3D View</a>
         </div>
     </nav>
     <main class="fx-main">
