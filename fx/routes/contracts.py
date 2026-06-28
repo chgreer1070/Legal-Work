@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from fx.config import CONTRACT_UPLOAD_DIR
 from fx.db import get_session
 from fx.models import Contract, FXClause
+from fx.routes.util import get_or_404
 from fx.audit.logger import log_event
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
@@ -45,10 +46,7 @@ def api_contract_detail(contract_id: int):
     """JSON contract detail with clauses."""
     session = get_session()
     try:
-        contract = session.query(Contract).filter(Contract.id == contract_id).first()
-        if not contract:
-            return jsonify({"error": "Contract not found"}), 404
-
+        contract = get_or_404(session, Contract, contract_id, "Contract")
         data = contract.to_dict()
         data["clauses"] = [c.to_dict() for c in contract.clauses]
         return jsonify(data)
@@ -171,10 +169,7 @@ def re_extract_clauses(contract_id: int):
     """Re-run clause extraction for a contract."""
     session = get_session()
     try:
-        contract = session.query(Contract).filter(Contract.id == contract_id).first()
-        if not contract:
-            return jsonify({"error": "Contract not found"}), 404
-
+        contract = get_or_404(session, Contract, contract_id, "Contract")
         if not contract.raw_text:
             return jsonify({"error": "No text available for extraction"}), 422
 

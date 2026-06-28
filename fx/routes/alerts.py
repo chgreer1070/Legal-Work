@@ -6,6 +6,7 @@ from flask import Blueprint, jsonify, render_template, request
 
 from fx.db import get_session
 from fx.models import Alert, Contract, FXClause, Transaction
+from fx.routes.util import get_or_404
 from fx.notifications.generator import generate_notification
 from fx.notifications.approval import approve_alert, dismiss_alert, mark_sent
 
@@ -44,10 +45,7 @@ def api_alert_detail(alert_id: int):
     """JSON alert detail with clause and contract info."""
     session = get_session()
     try:
-        alert = session.query(Alert).filter(Alert.id == alert_id).first()
-        if not alert:
-            return jsonify({"error": "Alert not found"}), 404
-
+        alert = get_or_404(session, Alert, alert_id, "Alert")
         data = alert.to_dict()
         if alert.clause:
             data["clause"] = alert.clause.to_dict()
@@ -61,10 +59,7 @@ def api_generate_notification(alert_id: int):
     """Generate notification text via Claude API."""
     session = get_session()
     try:
-        alert = session.query(Alert).filter(Alert.id == alert_id).first()
-        if not alert:
-            return jsonify({"error": "Alert not found"}), 404
-
+        alert = get_or_404(session, Alert, alert_id, "Alert")
         if alert.status != "triggered":
             return jsonify({"error": f"Cannot generate notification for status '{alert.status}'"}), 400
 

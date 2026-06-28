@@ -10,6 +10,8 @@ var filterState = {
 };
 var highlightedNodes = new Set();
 var defaultCameraZ = 400;
+var keyboardIndex = -1;
+var graphContainer = null;
 
 var NODE_TYPE_META = {
     contract:   { label: 'Contract',      color: '#0f3460' },
@@ -63,7 +65,9 @@ function initGraph(containerId, contractId) {
     }
 
     defaultCameraZ = contractId ? 250 : 400;
+    graphContainer = container;
 
+    container.addEventListener('keydown', handleGraphKeydown);
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             var panel = document.getElementById('detail-panel');
@@ -194,14 +198,79 @@ function getLinkColor(link) {
     }
 }
 
-function onNodeClick(node) {
-    highlightConnected(node);
-    showDetailPanel(node);
+function flyToNode(node, ms) {
+    if (!graphInstance || node.x == null) return;
     graphInstance.cameraPosition(
         { x: node.x + 80, y: node.y + 40, z: node.z + 80 },
         { x: node.x, y: node.y, z: node.z },
-        1000
+        ms || 1000
     );
+}
+
+function onNodeClick(node) {
+    highlightConnected(node);
+    showDetailPanel(node);
+    flyToNode(node);
+}
+
+// ── Keyboard navigation ───────────────────────────────────────────────────────
+// The graph renders to a WebGL canvas, so nodes are not natively focusable.
+// Arrow keys step through the visible nodes (highlight + fly + announce);
+// Enter/Space opens the detail panel for the focused node.
+
+function getVisibleNodes() {
+    if (!fullGraphData) return [];
+    return fullGraphData.nodes.filter(function(n) { return filterState[n.type]; });
+}
+
+function announce(message) {
+    var live = document.getElementById('graph-live');
+    if (live) live.textContent = message;
+}
+
+function focusNodeByIndex(idx) {
+    var nodes = getVisibleNodes();
+    if (nodes.length === 0) return;
+    keyboardIndex = ((idx % nodes.length) + nodes.length) % nodes.length;
+    var node = nodes[keyboardIndex];
+    highlightConnected(node);
+    flyToNode(node, 600);
+    var meta = NODE_TYPE_META[node.type] || {};
+    announce((meta.label || node.type) + ': ' + node.label +
+        '. Node ' + (keyboardIndex + 1) + ' of ' + nodes.length +
+        '. Press Enter for details.');
+}
+
+function handleGraphKeydown(e) {
+    var nodes = getVisibleNodes();
+    if (nodes.length === 0) return;
+    switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+            e.preventDefault();
+            focusNodeByIndex(keyboardIndex + 1);
+            break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+            e.preventDefault();
+            focusNodeByIndex(keyboardIndex - 1);
+            break;
+        case 'Home':
+            e.preventDefault();
+            focusNodeByIndex(0);
+            break;
+        case 'End':
+            e.preventDefault();
+            focusNodeByIndex(nodes.length - 1);
+            break;
+        case 'Enter':
+        case ' ':
+            if (keyboardIndex >= 0 && keyboardIndex < nodes.length) {
+                e.preventDefault();
+                showDetailPanel(nodes[keyboardIndex]);
+            }
+            break;
+    }
 }
 
 function highlightConnected(node) {
@@ -288,7 +357,12 @@ function showDetailPanel(node) {
 }
 
 function hideDetailPanel() {
-    document.getElementById('detail-panel').classList.remove('open');
+    var panel = document.getElementById('detail-panel');
+    // If focus was inside the panel (keyboard flow), return it to the graph so
+    // arrow-key navigation continues; don't steal focus on a stray mouse close.
+    var returnFocus = panel.contains(document.activeElement);
+    panel.classList.remove('open');
+    if (returnFocus && graphContainer) graphContainer.focus({ preventScroll: true });
 }
 
 function field(label, value, large) {
@@ -373,6 +447,7 @@ function resetView() {
     if (!graphInstance) return;
     clearHighlight();
     hideDetailPanel();
+    keyboardIndex = -1;
 
     Object.keys(filterState).forEach(function(k) { filterState[k] = true; });
     buildLegend();

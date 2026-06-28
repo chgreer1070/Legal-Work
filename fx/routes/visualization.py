@@ -4,12 +4,13 @@
 
 import math
 
-from flask import Blueprint, abort, jsonify, render_template, request
+from flask import Blueprint, jsonify, render_template, request
 from sqlalchemy.orm import joinedload
 
 from fx.config import GRAPH_CLAUSE_EXCERPT_CHARS, MAX_GRAPH_CONTRACTS
 from fx.db import get_session
 from fx.models import Alert, Contract, FXClause
+from fx.routes.util import get_or_404
 
 viz_bp = Blueprint("fx_viz", __name__)
 
@@ -201,15 +202,9 @@ def contract_3d_view(contract_id=None):
     if contract_id is not None:
         session = get_session()
         try:
-            exists = (
-                session.query(Contract.id)
-                .filter(Contract.id == contract_id)
-                .first()
-            )
+            get_or_404(session, Contract, contract_id, "Contract", as_json=False)
         finally:
             session.close()
-        if not exists:
-            abort(404)
     return render_template("contract_3d.html", contract_id=contract_id)
 
 

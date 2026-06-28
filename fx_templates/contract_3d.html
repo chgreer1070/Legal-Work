@@ -24,15 +24,23 @@
     </div>
 
     <div class="graph-layout">
-        <div id="graph-container" class="graph-canvas" role="region"
-             aria-label="3D contract structure graph. Click a node to view its details in the side panel."></div>
+        <div id="graph-container" class="graph-canvas" role="application" tabindex="0"
+             aria-label="3D contract structure graph"
+             aria-describedby="graph-kbd-help"></div>
+
+        <p id="graph-kbd-help" class="sr-only">
+            Use the arrow keys to move between contract nodes, Enter to open a
+            node's details, and Escape to close the details panel. Or use the
+            mouse: click and drag nodes to rearrange, scroll to zoom, right-drag to pan.
+        </p>
+        <div id="graph-live" class="sr-only" role="status" aria-live="polite"></div>
 
         <div class="graph-banner" id="graph-banner" role="status" style="display:none"></div>
 
         <div class="graph-status" id="graph-status" role="status" aria-live="polite" style="display:none"></div>
 
         <div class="graph-hint" id="graph-hint">
-            Click and drag nodes to rearrange. Scroll to zoom. Right-drag to pan.
+            Drag nodes to rearrange. Scroll to zoom. Right-drag to pan. Or focus the graph and use arrow keys.
         </div>
 
         <div class="graph-legend" id="graph-legend">
