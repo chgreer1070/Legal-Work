@@ -48,14 +48,17 @@ async function loadContract() {
             <div class="detail-grid">
                 <div><strong>Customer:</strong> ${esc(data.customer_name)}</div>
                 <div><strong>Reference:</strong> ${esc(data.contract_reference)}</div>
-                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(data.status)}</span></div>
+                <div><strong>Status:</strong> <span class="status-badge status-${esc(data.status)}">${esc(humanizeStatus(data.status))}</span></div>
                 <div><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</div>
             </div>
         `;
 
         const tbody = document.getElementById('clauses-table');
         if (!data.clauses || data.clauses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">No FX clauses extracted</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+                <div class="empty-state-title">No FX clauses extracted</div>
+                <div class="empty-state-hint">Click <strong>Re-Extract Clauses</strong> below if the contract was uploaded but extraction failed.</div>
+            </td></tr>`;
         } else {
             tbody.innerHTML = data.clauses.map(c => `
                 <tr>
@@ -67,6 +70,7 @@ async function loadContract() {
                     <td>${parseInt(c.notification_period_days)}</td>
                     <td>${(Number(c.confidence_score) * 100).toFixed(0)}%</td>
                 </tr>
+                ${c.formula_expression ? `<tr><td colspan="7" class="clause-text"><strong>Exposure formula:</strong> <code>${esc(c.formula_expression)}</code>${c.formula_description ? '<br>' + esc(c.formula_description) : ''}</td></tr>` : ''}
                 ${c.clause_text ? `<tr><td colspan="7" class="clause-text">${esc(c.clause_text)}</td></tr>` : ''}
             `).join('');
         }
@@ -78,9 +82,9 @@ async function reExtract() {
     try {
         const resp = await fetch(`/fx/contracts/${contractId}/re-extract`, { method: 'POST' });
         const data = await resp.json();
-        alert(`Re-extraction complete: ${data.clauses_extracted} clauses found.`);
+        showToast(`Re-extraction complete: ${data.clauses_extracted} clauses found.`, 'success');
         loadContract();
-    } catch(e) { alert('Re-extraction failed: ' + e.message); }
+    } catch(e) { showToast('Re-extraction failed: ' + e.message, 'error'); }
 }
 </script>
 {% endblock %}

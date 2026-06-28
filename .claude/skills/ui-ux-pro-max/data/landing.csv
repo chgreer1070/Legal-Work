@@ -1,0 +1,19 @@
+section,keywords,layout,cta,description
+Hero Centered,hero headline centered simple,Single centered headline with subtitle and CTA button,primary CTA button below headline,Classic centered hero with clear value proposition and single action
+Hero Split,hero split image text side-by-side,Two-column with text left and image/illustration right,CTA button in text column,Split layout balancing visual content with value proposition text
+Hero Video,hero video background immersive,Full-bleed background video with overlay text,CTA overlaid on video with contrast,Immersive video background for high-impact emotional landing
+Hero Product,hero product screenshot demo mockup,Product screenshot or interactive demo as the focal point,CTA adjacent to product visual,Product-forward hero showing the actual interface or product
+Hero Gradient,hero gradient bold modern,Bold gradient background with centered text,High-contrast CTA on gradient,Modern gradient hero with striking visual impact
+Features Grid,features grid benefits icons cards,3-4 column icon-card grid highlighting key features,CTA after features section,Standard feature showcase with icon/illustration per benefit
+Features Alternating,features alternating zigzag sections,Alternating left-right sections with image and description,Inline CTAs per feature or final CTA,Zigzag layout for detailed feature explanations with visuals
+Social Proof,testimonials reviews trust social-proof,Testimonial cards carousel or logo wall,CTA after social proof,Trust-building section with customer quotes ratings or partner logos
+Logo Wall,logos partners clients trust brands,Horizontal row or grid of client/partner logos,implicit trust (no direct CTA),Simple logo display establishing credibility through association
+Pricing Table,pricing plans tiers comparison,2-3 tier pricing cards with feature comparison,CTA per pricing tier (highlight recommended),Clear pricing comparison with recommended tier visually emphasized
+FAQ Accordion,faq questions accordion support,Expandable accordion list of common questions,CTA after FAQ or contact link,Reduces support load and builds confidence with transparent answers
+Stats Counter,stats numbers metrics impact,Large animated counter numbers showing key metrics,CTA near stats section,Impressive metrics display with counting animation on scroll
+CTA Banner,cta banner conversion action signup,Full-width colored banner with headline and button,Primary conversion CTA,Dedicated conversion-focused section breaking up content flow
+Newsletter Signup,newsletter email capture subscribe,Simple email input with subscribe button,Email submit button,Lightweight email capture for ongoing engagement
+Footer CTA,footer final cta last-chance,Footer section with final call-to-action before navigation,Final CTA before footer links,Last opportunity CTA placed above standard footer navigation
+Comparison Table,comparison versus competitors features,Side-by-side comparison with checkmarks and feature rows,CTA per column or after table,Feature matrix comparing product against alternatives
+How It Works,steps process flow how-it-works,3-4 numbered steps with icons explaining the process,CTA after final step,Sequential process explanation reducing friction and uncertainty
+Team Section,team people about-us bios,Team member cards with photos names and roles,link to careers or about page,Humanizes the brand with team member profiles

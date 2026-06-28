@@ -9,6 +9,14 @@ const PAIR_COLORS = {
 let rateChartInstance = null;
 let exposureChartInstance = null;
 
+function setChartEmpty(wrap, title, hint) {
+    wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+    const empty = document.createElement('div');
+    empty.className = 'chart-empty';
+    empty.innerHTML = `<div class="empty-state-title">${title}</div><div class="empty-state-hint">${hint}</div>`;
+    wrap.appendChild(empty);
+}
+
 async function loadRateChart() {
     const canvas = document.getElementById('rateChart');
     if (!canvas) return;
@@ -16,32 +24,39 @@ async function loadRateChart() {
     const pairs = ['USD/BRL', 'USD/MXN', 'USD/CNY'];
     const datasets = [];
 
-    for (const pair of pairs) {
+    const results = await Promise.all(pairs.map(async (pair) => {
         try {
             const resp = await fetch(`/fx/api/rates/${pair}/history?days=90`);
-            const data = await resp.json();
-            if (data.length === 0) continue;
-
-            const colors = PAIR_COLORS[pair] || { line: '#95a5a6', bg: 'rgba(149,165,166,0.1)' };
-            datasets.push({
-                label: pair,
-                data: data.map(d => ({ x: d.fetched_at, y: d.rate })),
-                borderColor: colors.line,
-                backgroundColor: colors.bg,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 0,
-                borderWidth: 2,
-            });
+            if (!resp.ok) return { pair, data: [] };
+            return { pair, data: await resp.json() };
         } catch (e) {
             console.error(`Rate chart error for ${pair}:`, e);
+            return { pair, data: [] };
         }
+    }));
+
+    for (const { pair, data } of results) {
+        if (data.length === 0) continue;
+        const colors = PAIR_COLORS[pair] || { line: '#95a5a6', bg: 'rgba(149,165,166,0.1)' };
+        datasets.push({
+            label: pair,
+            data: data.map(d => ({ x: d.fetched_at, y: d.rate })),
+            borderColor: colors.line,
+            backgroundColor: colors.bg,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2,
+        });
     }
 
     if (rateChartInstance) rateChartInstance.destroy();
 
+    const wrap = canvas.parentElement;
+    wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+
     if (datasets.length === 0) {
-        canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No rate data available. Click "Refresh Rates" to fetch.</p>';
+        setChartEmpty(wrap, 'No rate data yet', 'Click <strong>Refresh Rates</strong> to fetch the latest exchange rates.');
         return;
     }
 
@@ -50,6 +65,7 @@ async function loadRateChart() {
         data: { datasets },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: { intersect: false, mode: 'index' },
             scales: {
                 x: {
@@ -75,17 +91,20 @@ async function loadExposureChart() {
 
     try {
         const resp = await fetch('/fx/api/dashboard/exposure-by-pair');
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const data = await resp.json();
 
         const pairs = Object.keys(data);
+        const wrap = canvas.parentElement;
+        wrap.querySelectorAll('.chart-empty').forEach(el => el.remove());
+        if (exposureChartInstance) { exposureChartInstance.destroy(); exposureChartInstance = null; }
+
         if (pairs.length === 0) {
-            canvas.parentElement.innerHTML += '<p style="text-align:center;color:#999;">No exposure data available.</p>';
+            setChartEmpty(wrap, 'No exposure yet', 'Exposure appears once an alert is triggered for a currency pair.');
             return;
         }
 
         const colors = pairs.map(p => (PAIR_COLORS[p] || { line: '#95a5a6' }).line);
-
-        if (exposureChartInstance) exposureChartInstance.destroy();
 
         exposureChartInstance = new Chart(canvas, {
             type: 'doughnut',
@@ -100,6 +119,7 @@ async function loadExposureChart() {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom' },
                 },

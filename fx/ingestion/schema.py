@@ -14,6 +14,9 @@ class FXClauseSchema(BaseModel):
     adjustment_method: str = Field(default="full_passthrough", description="full_passthrough, shared, or capped")
     notification_period_days: int = Field(default=30, description="Days notice required")
     clause_text: str = Field(default="", description="Verbatim clause text from contract")
+    formula_type: str = Field(default="full_passthrough", description="full_passthrough, shared, capped, corridor, or custom")
+    formula_expression: str = Field(default="", description="Arithmetic expression computing the USD adjustment amount, or empty if the clause defines none")
+    formula_description: str = Field(default="", description="Plain-English description of the contract's calculation")
     confidence_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Extraction confidence")
 
 

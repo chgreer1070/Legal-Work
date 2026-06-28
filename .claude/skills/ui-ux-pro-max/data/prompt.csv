@@ -1,0 +1,21 @@
+style,keywords,css_keywords,ai_prompt
+Glassmorphism,glass blur transparent frosted,backdrop-filter blur background-opacity border-gradient,Frosted glass card with semi-transparent background blur overlay and subtle border gradient on a colorful backdrop
+Minimalism,minimal clean whitespace simple,margin padding white-space max-width line-height,Clean minimal interface with generous whitespace systematic spacing and only essential elements visible
+Flat Design,flat bold solid colorful,background-color border-none box-shadow-none solid,Bold flat-colored interface with solid backgrounds no shadows and clear visual hierarchy through color
+Neumorphism,neumorphic soft extruded embossed,box-shadow-inset box-shadow-dual background-matching,Soft embossed UI elements with dual light/dark shadows on matching background creating extruded appearance
+Brutalism,brutalist raw bold experimental,border-thick font-monospace text-transform uppercase,Raw brutalist interface with thick black borders monospace typography and unconventional asymmetric layout
+Claymorphism,clay 3d rounded inflated soft,border-radius-large inner-shadow gradient-surface,3D clay-like inflated UI elements with large border radius inner shadows and soft gradient surfaces
+Dark Mode,dark theme night oled,background-dark color-light elevation-light,Dark themed interface with elevated lighter surfaces desaturated accent colors and proper contrast hierarchy
+Bento Grid,bento grid mosaic varied card,grid-template-columns grid-row-span gap,Mosaic bento grid layout with varied card sizes spanning multiple rows and columns creating visual interest
+Aurora Gradient,aurora gradient mesh colorful,background-gradient conic-gradient mesh-gradient,Vivid aurora-style mesh gradient background with smooth multi-color transitions and glassmorphic content panels
+Cyberpunk Neon,cyberpunk neon glitch futuristic,text-shadow neon-glow border-glow animation-glitch,Cyberpunk interface with neon glowing text dark backgrounds scan-line effects and glitch animations
+Monochrome,monochrome grayscale single-color,filter-grayscale opacity color-shade,Monochromatic interface using tonal variations of a single color for depth hierarchy and visual interest
+Art Deco,art-deco geometric gold luxury,border-geometric pattern-repeat color-gold serif,Art deco inspired interface with geometric patterns gold accent details and elegant serif typography
+Scandinavian,scandinavian nordic warm clean,background-warm border-radius-soft color-natural,Scandinavian design with warm neutral backgrounds soft rounded corners and natural material-inspired textures
+Retro Pixel,retro pixel 8bit game nostalgic,image-rendering-pixelated font-pixel border-pixel,Retro 8-bit pixel art interface with pixelated graphics pixel font and limited color palette
+Material Design,material elevation ripple surface,elevation box-shadow transition-ripple surface,Material Design interface with elevation-based depth system ripple interaction feedback and surface hierarchy
+Organic Soft,organic blob biomorphic natural,border-radius-blob clip-path-organic background-natural,Organic interface with biomorphic blob shapes wave dividers and nature-inspired soft color palette
+Swiss International,swiss helvetica grid modernist,grid-strict font-helvetica letter-spacing margin,Swiss international style with strict grid alignment Helvetica typography and minimal color restrained composition
+Vapor Wave,vaporwave retro 80s synthwave,gradient-pink-cyan text-chrome grid-perspective,Vaporwave aesthetic with pink-to-cyan gradients chrome text effects and perspective grid backgrounds
+Hand Drawn,sketch doodle illustrated rough,border-rough svg-hand-drawn font-handwriting,Hand-drawn sketch style interface with rough borders illustrated elements and handwriting-style typography
+Corporate Professional,corporate business enterprise trust,border-subtle shadow-minimal color-blue-gray serif,Professional corporate interface with subtle borders minimal shadows and a trustworthy blue-gray color scheme
