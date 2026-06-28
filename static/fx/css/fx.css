@@ -174,7 +174,7 @@ body {
     letter-spacing: 0.3px;
 }
 .status-triggered, .status-pending_extraction { background: #ffeaa7; color: #856404; }
-.status-notification_drafted, .status-pending_approval { background: #74b9ff; color: #0c5460; }
+.status-pending_approval { background: #74b9ff; color: #0c5460; }
 .status-approved, .status-active { background: #55efc4; color: #155724; }
 .status-sent { background: #a29bfe; color: #2d1b69; }
 .status-dismissed, .status-expired { background: #dfe6e9; color: #636e72; }

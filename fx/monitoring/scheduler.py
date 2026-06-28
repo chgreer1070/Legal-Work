@@ -2,9 +2,13 @@
 APScheduler wrapper for periodic rate fetching and threshold checking.
 """
 
+import logging
+
 from apscheduler.schedulers.background import BackgroundScheduler
 
 from fx.config import RATE_FETCH_INTERVAL_MINUTES, THRESHOLD_CHECK_INTERVAL_MINUTES
+
+logger = logging.getLogger(__name__)
 
 _scheduler = None
 _flask_app = None
@@ -19,8 +23,8 @@ def _fetch_rates_job():
                 refresh_rates()
         else:
             refresh_rates()
-    except Exception as e:
-        print(f"[FX Scheduler] Rate fetch error: {e}")
+    except Exception:
+        logger.exception("Rate fetch job failed")
 
 
 def _check_thresholds_job():
@@ -33,9 +37,9 @@ def _check_thresholds_job():
         else:
             alerts = check_all_thresholds()
         if alerts:
-            print(f"[FX Scheduler] {len(alerts)} new alerts triggered")
-    except Exception as e:
-        print(f"[FX Scheduler] Threshold check error: {e}")
+            logger.info("%d new alerts triggered", len(alerts))
+    except Exception:
+        logger.exception("Threshold check job failed")
 
 
 def start_scheduler(app=None):
@@ -62,7 +66,11 @@ def start_scheduler(app=None):
         replace_existing=True,
     )
     _scheduler.start()
-    print(f"[FX Scheduler] Started: rates every {RATE_FETCH_INTERVAL_MINUTES}min, thresholds every {THRESHOLD_CHECK_INTERVAL_MINUTES}min")
+    logger.info(
+        "Started: rates every %dmin, thresholds every %dmin",
+        RATE_FETCH_INTERVAL_MINUTES,
+        THRESHOLD_CHECK_INTERVAL_MINUTES,
+    )
 
 
 def stop_scheduler():

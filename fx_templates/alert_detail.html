@@ -42,7 +42,7 @@ async function loadAlert() {
             </div>
             <div class="fx-actions" style="margin-top:1rem;">
                 ${data.status === 'triggered' ? `<button onclick="generateNotification()" class="btn btn-primary">Generate Notification</button>` : ''}
-                ${['triggered', 'notification_drafted', 'pending_approval'].includes(data.status) ? `<button onclick="dismissAlert()" class="btn btn-danger">Dismiss</button>` : ''}
+                ${['triggered', 'pending_approval'].includes(data.status) ? `<button onclick="dismissAlert()" class="btn btn-danger">Dismiss</button>` : ''}
             </div>
         `;
 
