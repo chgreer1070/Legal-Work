@@ -87,8 +87,12 @@
     flex-shrink: 0;
 }
 
+/* Visually hidden but still keyboard-focusable, so filters are reachable via Tab. */
 .legend-item input[type="checkbox"] {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
 }
 
 .graph-panel {
@@ -203,6 +207,61 @@
     text-transform: uppercase;
 }
 
+.graph-status {
+    position: absolute;
+    inset: 0;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    color: #cfd2e0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    background: #0a0a1a;
+    pointer-events: none;
+}
+
+.graph-status.error {
+    color: #ffb3bd;
+}
+
+.graph-banner {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 16;
+    max-width: 80%;
+    background: rgba(243, 156, 18, 0.95);
+    color: #3a2a00;
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.banner-close {
+    position: absolute;
+    top: 50%;
+    right: 0.5rem;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    line-height: 1;
+    color: #3a2a00;
+    cursor: pointer;
+}
+
+.btn:focus-visible,
+.panel-close:focus-visible,
+.legend-item:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 .graph-hint {
     position: absolute;
     top: 0.75rem;
@@ -221,6 +280,15 @@
 
 .graph-hint.fade {
     opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .graph-hint {
+        transition: none;
+    }
+    .graph-panel {
+        transition: none;
+    }
 }
 
 @media (max-width: 768px) {

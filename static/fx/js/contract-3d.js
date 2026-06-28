@@ -20,26 +20,94 @@ var NODE_TYPE_META = {
     exposure:   { label: 'Exposure',      color: '#e94560' }
 };
 
+function hasWebGL() {
+    try {
+        var canvas = document.createElement('canvas');
+        return !!(window.WebGLRenderingContext &&
+            (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    } catch (e) {
+        return false;
+    }
+}
+
+function setStatus(message, isError) {
+    var el = document.getElementById('graph-status');
+    if (!el) return;
+    if (!message) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    el.className = 'graph-status' + (isError ? ' error' : '');
+    el.innerHTML = esc(message);
+    el.style.display = 'flex';
+}
+
+function showBanner(message) {
+    var el = document.getElementById('graph-banner');
+    if (!el) return;
+    el.innerHTML = esc(message) +
+        ' <button type="button" class="banner-close" aria-label="Dismiss" ' +
+        'onclick="this.parentNode.style.display=\'none\'">&times;</button>';
+    el.style.display = 'block';
+}
+
 function initGraph(containerId, contractId) {
     var container = document.getElementById(containerId);
     if (!container) return;
 
+    if (typeof ForceGraph3D === 'undefined' || !hasWebGL()) {
+        setStatus('3D rendering is unavailable in this browser (WebGL required). ' +
+            'Use the table view to inspect this contract.', true);
+        return;
+    }
+
     defaultCameraZ = contractId ? 250 : 400;
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var panel = document.getElementById('detail-panel');
+            if (panel && panel.classList.contains('open')) {
+                clearHighlight();
+                hideDetailPanel();
+            }
+        }
+    });
 
     var apiUrl = '/fx/api/contracts/graph';
     if (contractId) apiUrl += '?contract_id=' + contractId;
 
+    setStatus('Loading contract graph…', false);
+
     fetch(apiUrl)
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+            if (!r.ok) {
+                return r.json().catch(function() { return {}; }).then(function(body) {
+                    throw new Error(body && body.error ? body.error : 'HTTP ' + r.status);
+                });
+            }
+            return r.json();
+        })
         .then(function(data) {
+            if (!data || typeof data !== 'object') {
+                throw new Error('Malformed response from server.');
+            }
             if (data.error) {
-                container.innerHTML = '<p style="color:#fff;text-align:center;padding:3rem">' +
-                    esc(data.error) + '</p>';
+                setStatus(data.error, true);
                 return;
             }
+            if (!data.nodes || data.nodes.length === 0) {
+                setStatus('No contract data to display yet. Upload a contract to see its 3D structure.', false);
+                return;
+            }
+            setStatus(null);
             fullGraphData = data;
             buildGraph(container, data);
             buildLegend();
+            if (data.meta && data.meta.truncated) {
+                showBanner('Showing the ' + parseInt(data.meta.limit) +
+                    ' most recent contracts. Narrow to a single contract for the full picture.');
+            }
             setTimeout(function() {
                 var hint = document.getElementById('graph-hint');
                 if (hint) hint.classList.add('fade');
@@ -47,7 +115,7 @@ function initGraph(containerId, contractId) {
         })
         .catch(function(err) {
             console.error('Graph load error:', err);
-            container.innerHTML = '<p style="color:#fff;text-align:center;padding:3rem">Failed to load graph data.</p>';
+            setStatus('Failed to load graph data: ' + (err && err.message ? err.message : 'unknown error'), true);
         });
 }
 
@@ -176,30 +244,34 @@ function showDetailPanel(node) {
             '<a class="panel-link" href="/fx/contracts/' + parseInt(d.id) + '">View contract details</a>';
     } else if (node.type === 'clause') {
         html = field('Currency Pair', d.currency_pair, true) +
-            field('Base Rate', d.base_rate ? d.base_rate.toFixed(4) : '-') +
-            field('Threshold', d.threshold_pct + '%') +
+            field('Base Rate', d.base_rate != null ? d.base_rate.toFixed(4) : '-') +
+            field('Threshold', d.threshold_pct != null ? d.threshold_pct + '%' : '-') +
             field('Review Frequency', d.review_frequency) +
             field('Adjustment Method', d.adjustment_method) +
-            field('Notice Period', d.notification_period_days + ' days') +
-            field('Confidence', d.confidence_score ? (d.confidence_score * 100).toFixed(0) + '%' : '-');
-        if (d.clause_text) {
-            html += '<div class="panel-clause-text">' + esc(d.clause_text) + '</div>';
+            field('Notice Period', d.notification_period_days != null ? d.notification_period_days + ' days' : '-') +
+            field('Confidence', d.confidence_score != null ? (d.confidence_score * 100).toFixed(0) + '%' : '-');
+        if (d.clause_excerpt) {
+            html += '<div class="panel-clause-text">' + esc(d.clause_excerpt) + '</div>';
+        }
+        if (d.contract_id != null) {
+            html += '<a class="panel-link" href="/fx/contracts/' + parseInt(d.contract_id) + '">View full clause text</a>';
         }
     } else if (node.type === 'alert') {
         html = field('Currency Pair', d.currency_pair, true) +
             badge('Status', d.status) +
-            field('Deviation', d.deviation_pct ? d.deviation_pct.toFixed(2) + '%' : '-') +
-            field('Base Rate', d.base_rate ? d.base_rate.toFixed(4) : '-') +
-            field('Current Rate', d.current_rate ? d.current_rate.toFixed(4) : '-') +
-            field('Exposure', d.exposure_amount ? '$' + formatNum(d.exposure_amount) : '-') +
+            field('Deviation', d.deviation_pct != null ? d.deviation_pct.toFixed(2) + '%' : '-') +
+            field('Base Rate', d.base_rate != null ? d.base_rate.toFixed(4) : '-') +
+            field('Current Rate', d.current_rate != null ? d.current_rate.toFixed(4) : '-') +
+            field('Exposure', d.exposure_amount != null ? '$' + formatNum(d.exposure_amount) : '-') +
             '<a class="panel-link" href="/fx/alerts/' + parseInt(d.id) + '">View alert details</a>';
     } else if (node.type === 'currency') {
         html = field('Currency Pair', d.currency_pair, true) +
             '<p style="color:var(--text-light);font-size:0.82rem;margin-top:0.5rem">' +
             'This node connects all clauses that monitor this currency pair.</p>';
     } else if (node.type === 'obligation') {
-        html = field('Type', d.obligation, true) +
-            field('Value', d.value);
+        html = field('Review Frequency', d.review_frequency, true) +
+            field('Notice Period', d.notification_period_days != null ? d.notification_period_days + ' days' : '-') +
+            field('Adjustment Method', d.adjustment_method);
     } else if (node.type === 'exposure') {
         html = field('Exposure Amount', '$' + formatNum(d.amount), true) +
             field('Currency Pair', d.currency_pair);
@@ -207,6 +279,12 @@ function showDetailPanel(node) {
 
     content.innerHTML = html;
     panel.classList.add('open');
+
+    // Move focus into the panel so keyboard/screen-reader users land on it.
+    // preventScroll avoids yanking the viewport when the panel opens from a
+    // mouse click mid-graph-navigation.
+    var closeBtn = panel.querySelector('.panel-close');
+    if (closeBtn) closeBtn.focus({ preventScroll: true });
 }
 
 function hideDetailPanel() {

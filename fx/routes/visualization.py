@@ -4,13 +4,24 @@
 
 import math
 
-from flask import Blueprint, jsonify, render_template, request
+from flask import Blueprint, abort, jsonify, render_template, request
 from sqlalchemy.orm import joinedload
 
+from fx.config import GRAPH_CLAUSE_EXCERPT_CHARS, MAX_GRAPH_CONTRACTS
 from fx.db import get_session
 from fx.models import Alert, Contract, FXClause
 
 viz_bp = Blueprint("fx_viz", __name__)
+
+
+def _excerpt(text, limit=GRAPH_CLAUSE_EXCERPT_CHARS):
+    """Trim clause text for the graph payload; full text lives on the detail page."""
+    if not text:
+        return ""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "…"
 
 
 def _risk_level(clause, alert_count):
@@ -73,13 +84,14 @@ def build_graph(contracts):
                 "risk": risk,
                 "details": {
                     "id": clause.id,
+                    "contract_id": clause.contract_id,
                     "currency_pair": clause.currency_pair,
                     "base_rate": float(clause.base_rate),
                     "threshold_pct": float(clause.threshold_pct),
                     "review_frequency": clause.review_frequency,
                     "adjustment_method": clause.adjustment_method,
                     "notification_period_days": clause.notification_period_days,
-                    "clause_text": clause.clause_text,
+                    "clause_excerpt": _excerpt(clause.clause_text),
                     "confidence_score": clause.confidence_score,
                 },
             })
@@ -109,47 +121,24 @@ def build_graph(contracts):
                 "type": "monitors",
             })
 
+            # One obligation node per clause carries all three contractual
+            # requirements. (Previously three separate nodes — collapsed to keep
+            # the graph readable and bound node count at scale.)
             nodes.append({
-                "id": f"oblig-{clause.id}-freq",
+                "id": f"oblig-{clause.id}",
                 "type": "obligation",
-                "label": f"Review: {clause.review_frequency}",
+                "label": f"Obligations: {clause.review_frequency}, {clause.notification_period_days}d notice",
                 "val": 6,
                 "color": "#2ecc71",
-                "details": {"obligation": "review_frequency", "value": clause.review_frequency},
+                "details": {
+                    "review_frequency": clause.review_frequency,
+                    "notification_period_days": clause.notification_period_days,
+                    "adjustment_method": clause.adjustment_method,
+                },
             })
             links.append({
                 "source": clause_node_id,
-                "target": f"oblig-{clause.id}-freq",
-                "label": "requires",
-                "type": "requires",
-            })
-
-            nodes.append({
-                "id": f"oblig-{clause.id}-notice",
-                "type": "obligation",
-                "label": f"Notice: {clause.notification_period_days}d",
-                "val": 6,
-                "color": "#2ecc71",
-                "details": {"obligation": "notification_period", "value": f"{clause.notification_period_days} days"},
-            })
-            links.append({
-                "source": clause_node_id,
-                "target": f"oblig-{clause.id}-notice",
-                "label": "requires",
-                "type": "requires",
-            })
-
-            nodes.append({
-                "id": f"oblig-{clause.id}-method",
-                "type": "obligation",
-                "label": f"Method: {clause.adjustment_method}",
-                "val": 6,
-                "color": "#2ecc71",
-                "details": {"obligation": "adjustment_method", "value": clause.adjustment_method},
-            })
-            links.append({
-                "source": clause_node_id,
-                "target": f"oblig-{clause.id}-method",
+                "target": f"oblig-{clause.id}",
                 "label": "requires",
                 "type": "requires",
             })
@@ -207,6 +196,20 @@ def build_graph(contracts):
 @viz_bp.route("/contracts/3d")
 @viz_bp.route("/contracts/<int:contract_id>/3d")
 def contract_3d_view(contract_id=None):
+    # Fail fast on an unknown contract rather than rendering a page that only
+    # surfaces the error later via a failed graph API call.
+    if contract_id is not None:
+        session = get_session()
+        try:
+            exists = (
+                session.query(Contract.id)
+                .filter(Contract.id == contract_id)
+                .first()
+            )
+        finally:
+            session.close()
+        if not exists:
+            abort(404)
     return render_template("contract_3d.html", contract_id=contract_id)
 
 
@@ -218,16 +221,37 @@ def api_contract_graph():
         query = session.query(Contract).options(
             joinedload(Contract.clauses).joinedload(FXClause.alerts),
         )
-        if contract_id:
-            query = query.filter(Contract.id == contract_id)
+        if contract_id is not None:
+            contracts = query.filter(Contract.id == contract_id).all()
+            if not contracts:
+                return jsonify({"error": "Contract not found"}), 404
+            truncated = False
         else:
-            query = query.filter(Contract.status == "active")
-
-        contracts = query.all()
-        if contract_id and not contracts:
-            return jsonify({"error": "Contract not found"}), 404
+            # Bound the all-contracts payload so a large account can't produce a
+            # multi-megabyte response that stalls the browser's force simulation.
+            # Fetch one extra row to detect truncation in a single query, and add
+            # an id tiebreaker so the "most recent" selection is stable when
+            # created_at timestamps tie (e.g. a bulk seed/import).
+            contracts = (
+                query.filter(Contract.status == "active")
+                .order_by(Contract.created_at.desc(), Contract.id.desc())
+                .limit(MAX_GRAPH_CONTRACTS + 1)
+                .all()
+            )
+            truncated = len(contracts) > MAX_GRAPH_CONTRACTS
+            contracts = contracts[:MAX_GRAPH_CONTRACTS]
 
         nodes, links = build_graph(contracts)
-        return jsonify({"nodes": nodes, "links": links})
+        return jsonify({
+            "nodes": nodes,
+            "links": links,
+            "meta": {
+                "contract_count": len(contracts),
+                "node_count": len(nodes),
+                "link_count": len(links),
+                "truncated": truncated,
+                "limit": MAX_GRAPH_CONTRACTS,
+            },
+        })
     finally:
         session.close()

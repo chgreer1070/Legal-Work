@@ -24,7 +24,12 @@
     </div>
 
     <div class="graph-layout">
-        <div id="graph-container" class="graph-canvas"></div>
+        <div id="graph-container" class="graph-canvas" role="region"
+             aria-label="3D contract structure graph. Click a node to view its details in the side panel."></div>
+
+        <div class="graph-banner" id="graph-banner" role="status" style="display:none"></div>
+
+        <div class="graph-status" id="graph-status" role="status" aria-live="polite" style="display:none"></div>
 
         <div class="graph-hint" id="graph-hint">
             Click and drag nodes to rearrange. Scroll to zoom. Right-drag to pan.
@@ -35,10 +40,10 @@
             <div id="legend-items"></div>
         </div>
 
-        <div class="graph-panel" id="detail-panel">
+        <div class="graph-panel" id="detail-panel" role="dialog" aria-labelledby="panel-title" aria-modal="false">
             <div class="panel-header">
                 <h3 id="panel-title">Details</h3>
-                <button onclick="hideDetailPanel()" class="panel-close">&times;</button>
+                <button type="button" onclick="hideDetailPanel()" class="panel-close" aria-label="Close details panel">&times;</button>
             </div>
             <div id="panel-content" class="panel-body"></div>
         </div>

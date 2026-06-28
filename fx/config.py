@@ -38,3 +38,12 @@ CURRENCY_PAIRS = [
 
 # Upload directory for contracts
 CONTRACT_UPLOAD_DIR = os.environ.get("FX_UPLOAD_DIR", "fx_uploads")
+
+# 3D visualization
+# Cap on contracts returned by the all-contracts graph endpoint, to bound the
+# JSON payload and the front-end force simulation. The single-contract view is
+# never limited.
+MAX_GRAPH_CONTRACTS = int(os.environ.get("FX_MAX_GRAPH_CONTRACTS", "200"))
+# Clause text is trimmed to this length in the graph payload; the full text
+# remains available on the contract detail page.
+GRAPH_CLAUSE_EXCERPT_CHARS = int(os.environ.get("FX_GRAPH_CLAUSE_EXCERPT_CHARS", "200"))
