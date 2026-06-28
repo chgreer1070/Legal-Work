@@ -2,9 +2,7 @@
 Claude API integration for generating formal FX recovery notifications.
 """
 
-import anthropic
-
-from fx.config import ANTHROPIC_API_KEY, CLAUDE_MODEL, NOTIFICATION_MAX_TOKENS
+from fx.config import CLAUDE_MODEL, NOTIFICATION_MAX_TOKENS
 from fx.audit.logger import log_event
 
 SYSTEM_PROMPT = """You are a legal communications specialist drafting formal FX adjustment notifications
@@ -60,10 +58,9 @@ def generate_notification(
 
     The generated text goes to pending_approval status - NEVER auto-sent.
     """
-    if not ANTHROPIC_API_KEY:
-        raise ValueError("ANTHROPIC_API_KEY not configured")
+    from fx.utils import get_anthropic_client
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = get_anthropic_client()
     prompt = NOTIFICATION_PROMPT.format(
         customer_name=customer_name,
         contract_reference=contract_reference,

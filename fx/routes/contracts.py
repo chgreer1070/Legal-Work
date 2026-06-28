@@ -2,6 +2,7 @@
 Contract management routes.
 """
 
+import logging
 from pathlib import Path
 
 from flask import Blueprint, jsonify, render_template, request
@@ -11,10 +12,64 @@ from fx.config import CONTRACT_UPLOAD_DIR
 from fx.db import get_session
 from fx.models import Contract, FXClause
 from fx.audit.logger import log_event
+from fx.exposure.formula import FormulaError, validate_formula
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc"}
 
+logger = logging.getLogger(__name__)
+
 contracts_bp = Blueprint("fx_contracts", __name__)
+
+
+def _persist_clauses(session, contract, clause_schemas):
+    """Create FXClause rows from extracted clause schemas, validating formulas."""
+    for clause_data in clause_schemas:
+        expression = (clause_data.formula_expression or "").strip()
+        if expression:
+            try:
+                validate_formula(expression)
+            except FormulaError as e:
+                logger.warning(
+                    "Rejecting invalid formula for %s on contract %d (%r): %s",
+                    clause_data.currency_pair, contract.id, expression, e,
+                )
+                expression = ""
+        session.add(FXClause(
+            contract_id=contract.id,
+            currency_pair=clause_data.currency_pair,
+            base_rate=clause_data.base_rate,
+            threshold_pct=clause_data.threshold_pct,
+            review_frequency=clause_data.review_frequency,
+            adjustment_method=clause_data.adjustment_method,
+            notification_period_days=clause_data.notification_period_days,
+            clause_text=clause_data.clause_text,
+            formula_type=clause_data.formula_type,
+            formula_expression=expression,
+            formula_description=clause_data.formula_description,
+            confidence_score=clause_data.confidence_score,
+        ))
+
+
+def _start_tracking(contract_id, clause_schemas) -> int:
+    """
+    Begin exposure tracking for freshly extracted clauses: generate
+    transaction history, refresh rates, and run an immediate threshold
+    check. Returns the number of new alerts created.
+    """
+    from fx.exposure.transaction_data import generate_mock_transactions
+    from fx.monitoring.rate_cache import refresh_rates
+    from fx.monitoring.threshold_checker import check_all_thresholds
+
+    for clause_data in clause_schemas:
+        generate_mock_transactions(contract_id, clause_data.currency_pair)
+
+    try:
+        refresh_rates()
+        return len(check_all_thresholds())
+    except Exception as e:
+        # Tracking continues on the scheduler's next cycle — never fail the upload
+        logger.error("Immediate threshold check failed for contract %d: %s", contract_id, e)
+        return 0
 
 
 @contracts_bp.route("/contracts")
@@ -126,31 +181,18 @@ def upload_contract():
         try:
             from fx.ingestion.clause_extractor import extract_clauses
             result = extract_clauses(raw_text, contract_id=contract.id)
-            for clause_data in result.clauses:
-                clause = FXClause(
-                    contract_id=contract.id,
-                    currency_pair=clause_data.currency_pair,
-                    base_rate=clause_data.base_rate,
-                    threshold_pct=clause_data.threshold_pct,
-                    review_frequency=clause_data.review_frequency,
-                    adjustment_method=clause_data.adjustment_method,
-                    notification_period_days=clause_data.notification_period_days,
-                    clause_text=clause_data.clause_text,
-                    confidence_score=clause_data.confidence_score,
-                )
-                session.add(clause)
+            _persist_clauses(session, contract, result.clauses)
 
             contract.status = "active"
             session.commit()
 
-            # Generate mock transactions for each extracted clause's currency pair
-            from fx.exposure.transaction_data import generate_mock_transactions
-            for clause_data in result.clauses:
-                generate_mock_transactions(contract.id, clause_data.currency_pair)
+            # Begin exposure tracking immediately
+            new_alerts = _start_tracking(contract.id, result.clauses)
 
             return jsonify({
                 "contract_id": contract.id,
                 "clauses_extracted": len(result.clauses),
+                "new_alerts": new_alerts,
                 "status": "active",
             })
         except Exception as e:
@@ -185,24 +227,16 @@ def re_extract_clauses(contract_id: int):
         try:
             from fx.ingestion.clause_extractor import extract_clauses
             result = extract_clauses(contract.raw_text, contract_id=contract_id)
-            for clause_data in result.clauses:
-                clause = FXClause(
-                    contract_id=contract.id,
-                    currency_pair=clause_data.currency_pair,
-                    base_rate=clause_data.base_rate,
-                    threshold_pct=clause_data.threshold_pct,
-                    review_frequency=clause_data.review_frequency,
-                    adjustment_method=clause_data.adjustment_method,
-                    notification_period_days=clause_data.notification_period_days,
-                    clause_text=clause_data.clause_text,
-                    confidence_score=clause_data.confidence_score,
-                )
-                session.add(clause)
+            _persist_clauses(session, contract, result.clauses)
             session.commit()
+
+            # Begin exposure tracking immediately
+            new_alerts = _start_tracking(contract.id, result.clauses)
 
             return jsonify({
                 "contract_id": contract_id,
                 "clauses_extracted": len(result.clauses),
+                "new_alerts": new_alerts,
             })
         except Exception as e:
             return jsonify({"error": f"Extraction failed: {str(e)}"}), 500

@@ -43,7 +43,10 @@ async function loadAudit() {
         const entries = await resp.json();
         const tbody = document.getElementById('audit-table');
         if (entries.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6">No audit entries</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="6" class="empty-state">
+                <div class="empty-state-title">No audit entries</div>
+                <div class="empty-state-hint">Audit entries are recorded for every state change. Approve, dismiss, or send an alert to populate this trail.</div>
+            </td></tr>`;
         } else {
             tbody.innerHTML = entries.map(e => `
                 <tr>

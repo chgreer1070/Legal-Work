@@ -5,53 +5,57 @@
 <div class="fx-header">
     <h1>FX Recovery Dashboard</h1>
     <div class="fx-actions">
-        <button onclick="refreshRates()" class="btn btn-primary">Refresh Rates</button>
-        <button onclick="runPredictions()" class="btn btn-secondary">Run Predictions</button>
+        <button id="btn-refresh-rates" type="button" class="btn btn-primary">Refresh Rates</button>
+        <button id="btn-run-predictions" type="button" class="btn btn-secondary">Run Predictions</button>
     </div>
 </div>
 
 <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
         <div class="stat-label">Active Contracts</div>
-        <div class="stat-value" id="stat-contracts">--</div>
+        <div class="stat-value" id="stat-contracts" aria-live="polite">--</div>
     </div>
     <div class="stat-card stat-alert">
         <div class="stat-label">Open Alerts</div>
-        <div class="stat-value" id="stat-alerts">--</div>
+        <div class="stat-value" id="stat-alerts" aria-live="polite">--</div>
     </div>
     <div class="stat-card stat-warning">
         <div class="stat-label">Total Exposure</div>
-        <div class="stat-value" id="stat-exposure">--</div>
+        <div class="stat-value" id="stat-exposure" aria-live="polite">--</div>
     </div>
     <div class="stat-card stat-success">
         <div class="stat-label">Notifications Sent</div>
-        <div class="stat-value" id="stat-sent">--</div>
+        <div class="stat-value" id="stat-sent" aria-live="polite">--</div>
     </div>
 </div>
 
 <div class="charts-row">
     <div class="chart-card">
-        <h3>FX Rates (90 Days)</h3>
-        <canvas id="rateChart"></canvas>
+        <h2>FX Rates (90 Days)</h2>
+        <div class="chart-canvas-wrap">
+            <canvas id="rateChart" aria-label="Line chart of FX rates over the last 90 days for three currency pairs"></canvas>
+        </div>
     </div>
     <div class="chart-card">
-        <h3>Exposure by Currency Pair</h3>
-        <canvas id="exposureChart"></canvas>
+        <h2>Exposure by Currency Pair</h2>
+        <div class="chart-canvas-wrap">
+            <canvas id="exposureChart" aria-label="Doughnut chart of currency exposure by pair"></canvas>
+        </div>
     </div>
 </div>
 
 <div class="table-card">
-    <h3>Recent Alerts</h3>
+    <h2>Recent Alerts</h2>
     <table class="fx-table">
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Customer</th>
-                <th>Pair</th>
-                <th>Deviation</th>
-                <th>Exposure</th>
-                <th>Status</th>
-                <th>Created</th>
+                <th scope="col">ID</th>
+                <th scope="col">Customer</th>
+                <th scope="col">Pair</th>
+                <th scope="col">Deviation</th>
+                <th scope="col">Exposure</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created</th>
             </tr>
         </thead>
         <tbody id="recent-alerts">
@@ -63,6 +67,8 @@
 <script src="{{ url_for('fx.static', filename='js/charts.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-refresh-rates').addEventListener('click', refreshRates);
+    document.getElementById('btn-run-predictions').addEventListener('click', runPredictions);
     loadDashboard();
 });
 
@@ -83,7 +89,10 @@ async function loadDashboard() {
         const alerts = await resp.json();
         const tbody = document.getElementById('recent-alerts');
         if (alerts.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">No alerts</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+                <div class="empty-state-title">No alerts yet</div>
+                <div class="empty-state-hint">Click <strong>Refresh Rates</strong> to fetch the latest exchange rates and check for threshold breaches.</div>
+            </td></tr>`;
         } else {
             tbody.innerHTML = alerts.slice(0, 10).map(a => `
                 <tr>
@@ -92,7 +101,7 @@ async function loadDashboard() {
                     <td>${esc(a.currency_pair)}</td>
                     <td>${Number(a.deviation_pct).toFixed(2)}%</td>
                     <td>$${Number(a.exposure_amount).toLocaleString()}</td>
-                    <td><span class="status-badge status-${esc(a.status)}">${esc(a.status)}</span></td>
+                    <td><span class="status-badge status-${esc(a.status)}">${esc(humanizeStatus(a.status))}</span></td>
                     <td>${new Date(a.created_at).toLocaleDateString()}</td>
                 </tr>
             `).join('');
@@ -105,24 +114,35 @@ async function loadDashboard() {
 }
 
 async function refreshRates() {
-    try {
-        const resp = await fetch('/fx/api/rates/refresh', { method: 'POST' });
-        const data = await resp.json();
-        alert(`Updated ${data.rates_updated} rates. ${data.new_alerts} new alerts.`);
-        loadDashboard();
-    } catch(e) { alert('Rate refresh failed: ' + e.message); }
+    const btn = document.getElementById('btn-refresh-rates');
+    await withButtonLoading(btn, async () => {
+        try {
+            const resp = await fetch('/fx/api/rates/refresh', { method: 'POST' });
+            const data = await resp.json();
+            const noun = data.new_alerts === 1 ? 'alert' : 'alerts';
+            showToast(`Updated ${data.rates_updated} rates · ${data.new_alerts} new ${noun}`, 'success');
+            loadDashboard();
+        } catch(e) {
+            showToast('Rate refresh failed: ' + e.message, 'error');
+        }
+    });
 }
 
 async function runPredictions() {
-    try {
-        const resp = await fetch('/fx/api/predictions/run', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
-        });
-        const data = await resp.json();
-        alert(`Predictions complete for ${data.length} pairs.`);
-    } catch(e) { alert('Prediction failed: ' + e.message); }
+    const btn = document.getElementById('btn-run-predictions');
+    await withButtonLoading(btn, async () => {
+        try {
+            const resp = await fetch('/fx/api/predictions/run', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
+            });
+            const data = await resp.json();
+            showToast(`Predictions complete for ${data.length} pairs`, 'success');
+        } catch(e) {
+            showToast('Prediction failed: ' + e.message, 'error');
+        }
+    });
 }
 </script>
 {% endblock %}

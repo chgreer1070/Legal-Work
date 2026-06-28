@@ -1,0 +1,26 @@
+name,type,keywords,use_case,library,description
+Line Chart,trend,line trend time-series progression continuous,Show continuous data trends over time,Chart.js Recharts Victory,Best for time-series data showing progression and trends
+Bar Chart,comparison,bar comparison categorical ranking,Compare discrete categories or groups,Chart.js Recharts D3,Ideal for comparing values across categories
+Horizontal Bar,comparison,horizontal bar ranking sorted long-label,Rankings or categories with long labels,Chart.js Recharts D3,Better than vertical bars when labels are long or items are ranked
+Stacked Bar,composition,stacked bar part-to-whole composition breakdown,Show composition within categories,Chart.js Recharts D3,Reveals part-to-whole relationships within each category
+Grouped Bar,comparison,grouped bar multi-series side-by-side compare,Compare multiple series across categories,Chart.js Recharts D3,Side-by-side bars for direct multi-series comparison
+Area Chart,trend,area filled volume cumulative,Show volume or cumulative values over time,Chart.js Recharts Victory,Filled line chart emphasizing magnitude and volume
+Stacked Area,composition,stacked area composition trend breakdown,Show composition changes over time,Chart.js Recharts D3,Reveals how category contributions shift over time
+Pie Chart,proportion,pie proportion distribution share,Show proportional distribution (max 5 segments),Chart.js Recharts Nivo,Best limited to 5 or fewer segments for readability
+Donut Chart,proportion,donut ring proportion metric center,Proportional display with center metric,Chart.js Recharts Nivo,Pie variant with central KPI display area
+Scatter Plot,correlation,scatter correlation relationship distribution,Show correlation between two variables,Chart.js Recharts D3 Plotly,Reveals relationships and clusters in two-dimensional data
+Bubble Chart,correlation,bubble three-variable size correlation,Show three variables (x y and size),D3 Plotly Recharts,Scatter extension adding a size dimension for third variable
+Radar Chart,multivariate,radar spider comparison multi-axis,Compare entities across multiple dimensions,Chart.js Recharts Nivo,Useful for skill assessments and multi-dimension comparison
+Heatmap,density,heatmap density matrix calendar,Show density patterns in matrix format,D3 Nivo CalHeatmap,Grid-based color intensity for pattern discovery
+Treemap,hierarchy,treemap hierarchy proportional nested,Show hierarchical data as proportional rectangles,D3 Recharts Nivo,Nested rectangles showing size and hierarchy simultaneously
+Sunburst,hierarchy,sunburst radial hierarchy drill-down,Show hierarchical data as concentric rings,D3 Nivo Plotly,Radial treemap for hierarchical drill-down exploration
+Funnel Chart,conversion,funnel conversion pipeline stages drop-off,Show conversion rates through stages,Recharts Nivo D3,Visualize drop-off rates through sequential process stages
+Gauge Chart,metric,gauge speedometer kpi target progress,Show single metric against target,D3 Custom react-gauge,Dashboard KPI display showing progress toward a goal
+Candlestick,financial,candlestick ohlc stock trading finance,Show financial OHLC price data,Lightweight Charts TradingView D3,Standard financial chart for open-high-low-close price data
+Waterfall,accounting,waterfall bridge incremental cumulative,Show incremental positive/negative contributions,D3 Recharts Custom,Reveals how sequential values contribute to a total
+Gantt Chart,timeline,gantt project schedule timeline task,Show project schedules and task timelines,D3 Frappe Gantt Custom,Timeline bars showing task duration and dependencies
+Sankey,flow,sankey flow allocation path distribution,Show flow distribution between nodes,D3 Nivo Plotly,Visualize how quantities flow and distribute between categories
+Sparkline,inline,sparkline inline mini compact trend,Show inline trend within text or table cell,Chart.js Custom SVG,Tiny chart embedded in context for at-a-glance trends
+Histogram,distribution,histogram frequency distribution bin,Show frequency distribution of continuous data,D3 Plotly Recharts,Bars representing frequency of values within ranges
+Box Plot,statistics,box-plot whisker quartile distribution outlier,Show statistical distribution with quartiles,D3 Plotly Nivo,Displays median quartiles and outliers for statistical comparison
+Timeline,temporal,timeline chronological event history,Show chronological events or milestones,D3 vis-timeline Custom,Chronological display of events along a time axis

@@ -2,13 +2,16 @@
 Core business logic: compare current FX rates against contract thresholds.
 """
 
-from decimal import Decimal
+import logging
+from decimal import Decimal, InvalidOperation
 
 from fx.db import get_session
 from fx.models import Alert, Contract, FXClause
 from fx.monitoring.rate_cache import get_latest_rates
 from fx.exposure.calculator import calculate_exposure
 from fx.audit.logger import log_event
+
+logger = logging.getLogger(__name__)
 
 
 def check_all_thresholds() -> list[dict]:
@@ -35,7 +38,12 @@ def check_all_thresholds() -> list[dict]:
             if pair not in latest_rates:
                 continue
 
-            current_rate = Decimal(str(latest_rates[pair]["rate"]))
+            try:
+                current_rate = Decimal(str(latest_rates[pair]["rate"]))
+            except (KeyError, InvalidOperation, TypeError) as e:
+                logger.warning("Bad rate data for %s (clause %d): %s", pair, clause.id, e)
+                continue
+
             base_rate = clause.base_rate
 
             if base_rate == 0:
@@ -56,10 +64,16 @@ def check_all_thresholds() -> list[dict]:
                 if existing:
                     continue
 
-                # Calculate exposure
-                exposure = calculate_exposure(
-                    clause.contract_id, pair, base_rate, current_rate, session=session
-                )
+                exposure_unavailable = False
+                try:
+                    exposure = calculate_exposure(
+                        clause.contract_id, pair, base_rate, current_rate,
+                        session=session, clause=clause,
+                    )
+                except Exception as e:
+                    logger.error("Exposure calc failed for clause %d (%s): %s", clause.id, pair, e)
+                    exposure = Decimal("0")
+                    exposure_unavailable = True
 
                 alert = Alert(
                     clause_id=clause.id,
@@ -86,6 +100,7 @@ def check_all_thresholds() -> list[dict]:
                         "deviation_pct": float(deviation_pct),
                         "threshold_pct": float(clause.threshold_pct),
                         "exposure_amount": float(exposure),
+                        "exposure_unavailable": exposure_unavailable,
                     },
                     session=session,
                 )

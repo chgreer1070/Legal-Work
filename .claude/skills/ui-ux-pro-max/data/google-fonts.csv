@@ -1,0 +1,31 @@
+name,category,weights,keywords,variable,description
+Inter,sans-serif,100 200 300 400 500 600 700 800 900,modern versatile clean professional ui popular,yes,Highly versatile sans-serif designed for computer screens with excellent legibility
+Roboto,sans-serif,100 300 400 500 700 900,material android google modern geometric,no,Google's signature typeface balancing mechanical and organic
+Open Sans,sans-serif,300 400 500 600 700 800,neutral friendly readable web popular,yes,Friendly neutral sans-serif with excellent readability at all sizes
+Poppins,sans-serif,100 200 300 400 500 600 700 800 900,geometric rounded friendly modern popular,no,Geometric sans-serif with consistent circular forms and friendly character
+Montserrat,sans-serif,100 200 300 400 500 600 700 800 900,geometric urban heading display popular,yes,Urban geometric sans inspired by old Montserrat neighborhood signage
+Lato,sans-serif,100 300 400 700 900,warm friendly professional readable,no,Warm humanist sans-serif balancing structure with approachability
+Source Sans 3,sans-serif,200 300 400 500 600 700 800 900,adobe professional readable ui body,yes,Adobe's first open source typeface designed for UI and readability
+Nunito,sans-serif,200 300 400 500 600 700 800 900,rounded friendly soft modern,yes,Well-balanced rounded sans-serif with soft terminals
+DM Sans,sans-serif,100 200 300 400 500 600 700 800 900,geometric clean modern low-contrast,yes,Low-contrast geometric sans-serif for clean modern interfaces
+Plus Jakarta Sans,sans-serif,200 300 400 500 600 700 800,contemporary modern geometric clean,yes,Contemporary geometric sans-serif with distinctive character
+Work Sans,sans-serif,100 200 300 400 500 600 700 800 900,versatile screen reading body,yes,Versatile sans-serif optimized for on-screen text
+Space Grotesk,sans-serif,300 400 500 600 700,tech developer modern proportional,yes,Proportional companion to Space Mono with technical character
+Outfit,sans-serif,100 200 300 400 500 600 700 800 900,geometric clean contemporary variable,yes,Contemporary geometric sans with excellent variable font support
+Figtree,sans-serif,300 400 500 600 700 800 900,friendly geometric clean modern,yes,Friendly geometric sans designed for readability and accessibility
+Geist,sans-serif,100 200 300 400 500 600 700 800 900,vercel modern developer minimal,yes,Vercel's typeface for modern developer-focused interfaces
+Playfair Display,serif,400 500 600 700 800 900,elegant luxury editorial display heading,yes,High-contrast transitional serif for elegant display headings
+Merriweather,serif,300 400 700 900,readable screen serif body content,no,Screen-optimized serif designed for pleasant reading at any size
+Lora,serif,400 500 600 700,calligraphic elegant readable body,yes,Calligraphic serif with good readability for body text
+Source Serif 4,serif,200 300 400 500 600 700 800 900,adobe professional serif content,yes,Adobe's serif companion to Source Sans for professional content
+Cormorant Garamond,serif,300 400 500 600 700,luxury fashion editorial elegant light,no,Elegant display Garamond for luxury and fashion contexts
+Libre Baskerville,serif,400 700,classic literary reading traditional,no,Classic Baskerville adapted for web with excellent readability
+DM Serif Display,serif,400,classic modern display heading elegant,no,Classic modern display serif for impactful headings
+Fraunces,serif,100 200 300 400 500 600 700 800 900,quirky distinctive soft warm variable,yes,Quirky soft serif with optical sizing and distinctive personality
+Noto Serif,serif,100 200 300 400 500 600 700 800 900,multilingual global readable universal,yes,Universal serif supporting 1000+ languages for global readability
+JetBrains Mono,monospace,100 200 300 400 500 600 700 800,code developer programming ide ligatures,no,Developer monospace with increased height and coding ligatures
+Fira Code,monospace,300 400 500 600 700,code ligatures programming developer,yes,Monospace with programming ligatures for code editors
+Space Mono,monospace,400 700,retro tech monospace developer,no,Fixed-width typeface with a retro-futuristic character
+Geist Mono,monospace,100 200 300 400 500 600 700 800 900,vercel developer code modern,yes,Vercel's monospace companion to Geist for code and terminals
+IBM Plex Mono,monospace,100 200 300 400 500 600 700,ibm corporate developer terminal,no,IBM's monospace typeface for code and technical content
+Noto Sans JP,sans-serif,100 200 300 400 500 600 700 800 900,japanese multilingual cjk global,no,Google's Japanese sans-serif from the Noto pan-language family

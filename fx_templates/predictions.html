@@ -4,7 +4,7 @@
 {% block content %}
 <div class="fx-header">
     <h1>FX Breach Predictions</h1>
-    <button onclick="runPredictions()" class="btn btn-primary">Run Predictions</button>
+    <button id="btn-run-predictions" type="button" class="btn btn-primary">Run Predictions</button>
 </div>
 
 <div class="table-card">
@@ -27,7 +27,10 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', loadPredictions);
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('btn-run-predictions').addEventListener('click', runPredictions);
+    loadPredictions();
+});
 
 async function loadPredictions() {
     try {
@@ -35,7 +38,10 @@ async function loadPredictions() {
         const predictions = await resp.json();
         const tbody = document.getElementById('predictions-table');
         if (predictions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7">No predictions yet. Click "Run Predictions" to generate.</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">
+                <div class="empty-state-title">No predictions yet</div>
+                <div class="empty-state-hint">Click <strong>Run Predictions</strong> to forecast breach probability across all configured currency pairs.</div>
+            </td></tr>`;
         } else {
             tbody.innerHTML = predictions.map(p => `
                 <tr>
@@ -49,7 +55,7 @@ async function loadPredictions() {
                     </td>
                     <td>${p.predicted_direction}</td>
                     <td>${p.horizon_days} days</td>
-                    <td>${p.confidence_lower ? p.confidence_lower.toFixed(4) + ' - ' + p.confidence_upper.toFixed(4) : '--'}</td>
+                    <td>${p.confidence_lower != null ? p.confidence_lower.toFixed(4) + ' - ' + p.confidence_upper.toFixed(4) : '--'}</td>
                     <td>${p.model_version}</td>
                     <td>${p.prediction_date || '--'}</td>
                 </tr>
@@ -59,14 +65,23 @@ async function loadPredictions() {
 }
 
 async function runPredictions() {
-    try {
-        const resp = await fetch('/fx/api/predictions/run', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
-        });
-        if (resp.ok) { loadPredictions(); }
-    } catch(e) { alert('Error: ' + e.message); }
+    const btn = document.getElementById('btn-run-predictions');
+    await withButtonLoading(btn, async () => {
+        try {
+            const resp = await fetch('/fx/api/predictions/run', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({threshold_pct: 5.0, horizon_days: 30})
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                showToast(`Forecast complete for ${data.length} currency pairs`, 'success');
+                loadPredictions();
+            } else {
+                showToast('Prediction failed', 'error');
+            }
+        } catch(e) { showToast('Error: ' + e.message, 'error'); }
+    });
 }
 </script>
 {% endblock %}

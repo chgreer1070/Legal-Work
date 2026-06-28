@@ -5,21 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FX Recovery System{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('fx.static', filename='css/fx.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="{{ url_for('fx.static', filename='js/chart.umd.js') }}" defer></script>
+    <script src="{{ url_for('fx.static', filename='js/chartjs-adapter-date-fns.bundle.min.js') }}" defer></script>
     {% block head %}{% endblock %}
 </head>
 <body>
-    <nav class="fx-nav">
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <nav class="fx-nav" aria-label="Primary">
         <div class="fx-nav-brand">FX Recovery System</div>
         <div class="fx-nav-links">
-            <a href="{{ url_for('fx.fx_dashboard.index') }}" class="{% if request.endpoint == 'fx.fx_dashboard.index' %}active{% endif %}">Dashboard</a>
-            <a href="{{ url_for('fx.fx_contracts.list_contracts') }}" class="{% if 'contracts' in request.endpoint %}active{% endif %}">Contracts</a>
-            <a href="{{ url_for('fx.fx_alerts.list_alerts') }}" class="{% if 'alerts' in request.endpoint %}active{% endif %}">Alerts</a>
-            <a href="{{ url_for('fx.fx_dashboard.predictions') }}" class="{% if 'predictions' in request.endpoint %}active{% endif %}">Predictions</a>
-            <a href="{{ url_for('fx.fx_dashboard.audit_log') }}" class="{% if 'audit' in request.endpoint %}active{% endif %}">Audit Log</a>
+            <a href="{{ url_for('fx.fx_dashboard.index') }}" class="{% if request.endpoint == 'fx.fx_dashboard.index' %}active{% endif %}"{% if request.endpoint == 'fx.fx_dashboard.index' %} aria-current="page"{% endif %}>Dashboard</a>
+            <a href="{{ url_for('fx.fx_contracts.list_contracts') }}" class="{% if 'contracts' in request.endpoint %}active{% endif %}"{% if 'contracts' in request.endpoint %} aria-current="page"{% endif %}>Contracts</a>
+            <a href="{{ url_for('fx.fx_alerts.list_alerts') }}" class="{% if 'alerts' in request.endpoint %}active{% endif %}"{% if 'alerts' in request.endpoint %} aria-current="page"{% endif %}>Alerts</a>
+            <a href="{{ url_for('fx.fx_dashboard.predictions') }}" class="{% if 'predictions' in request.endpoint %}active{% endif %}"{% if 'predictions' in request.endpoint %} aria-current="page"{% endif %}>Predictions</a>
+            <a href="{{ url_for('fx.fx_dashboard.audit_log') }}" class="{% if 'audit' in request.endpoint %}active{% endif %}"{% if 'audit' in request.endpoint %} aria-current="page"{% endif %}>Audit Log</a>
+            <a href="{{ url_for('fx.fx_viz.contract_3d_view') }}" class="{% if '3d' in request.path %}active{% endif %}"{% if '3d' in request.path %} aria-current="page"{% endif %}>3D View</a>
         </div>
     </nav>
-    <main class="fx-main">
+    <main class="fx-main" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
     <script src="{{ url_for('fx.static', filename='js/dashboard.js') }}"></script>

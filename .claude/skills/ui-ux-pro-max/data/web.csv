@@ -1,0 +1,21 @@
+topic,platform,keywords,implementation,description
+Touch Target Size,iOS Android,touch target size 44pt 48dp accessibility,iOS: min 44x44pt frame or hitSlop; Android: min 48x48dp with padding,Minimum interactive area ensuring reliable touch interaction
+Safe Area Insets,iOS Android,safe area inset notch dynamic-island status-bar,Use SafeAreaView or useSafeAreaInsets from react-native-safe-area-context,Respect device safe areas for content positioning around notch and home bar
+Dynamic Type,iOS,dynamic type text scaling font size accessibility,Use allowFontScaling and maxFontSizeMultiplier; test at largest size,Support iOS Dynamic Type for system-wide text size preferences
+Accessibility Labels,iOS Android,accessibility label hint role screen-reader,accessibilityLabel for identity; accessibilityHint for behavior result,Provide meaningful labels for VoiceOver and TalkBack screen readers
+Accessibility Roles,iOS Android,accessibility role button link header image,Set accessibilityRole to convey element purpose to assistive tech,Correct roles ensure screen readers announce element type properly
+Reduced Motion,iOS Android,reduced motion prefers animation accessibility,Check AccessibilityInfo.isReduceMotionEnabled; provide still alternatives,Respect user motion sensitivity preferences in animations
+Color Scheme,iOS Android,dark mode color scheme appearance,Use useColorScheme hook; define semantic color tokens per scheme,Adapt interface to system dark/light mode preference
+Keyboard Avoidance,iOS Android,keyboard avoiding view input scroll,KeyboardAvoidingView with behavior=padding (iOS) or height (Android),Ensure inputs remain visible when software keyboard appears
+Status Bar Style,iOS Android,status bar style light dark translucent,Use StatusBar component to match bar style with screen background,Status bar text color must contrast with the screen background
+Haptic Feedback,iOS Android,haptic vibration feedback touch,Use expo-haptics or react-native-haptic-feedback for touch response,Provide tactile feedback for meaningful interactions and confirmations
+Orientation Support,iOS Android,orientation landscape portrait rotation,Handle layout changes via useWindowDimensions or Dimensions listener,Ensure layout adapts properly when device rotates
+Deep Linking,iOS Android,deep link universal link url scheme,Configure linking config in React Navigation; handle URL parameters,Enable external URLs to open specific screens within the app
+Push Notifications,iOS Android,push notification permission token remote,Request permission; register token; handle foreground/background,Handle notification permissions and display across app states
+Gesture Navigation,iOS Android,gesture navigation back swipe edge,Don't place swipeable content near left edge; respect system gestures,Avoid conflicts with system gesture navigation areas
+Splash Screen,iOS Android,splash screen launch loading branding,Use expo-splash-screen or native splash; hide after assets load,Show branded splash during app initialization and asset loading
+App State,iOS Android,app state background foreground lifecycle,Use AppState listener to handle background/foreground transitions,Pause expensive operations when backgrounded; refresh on foreground
+Biometric Auth,iOS Android,biometric face-id touch-id authentication,Use expo-local-authentication or react-native-biometrics,Offer biometric authentication with password fallback
+Network State,iOS Android,network connectivity offline status,Use @react-native-community/netinfo; show offline indicator,Detect and communicate network state changes to the user
+Permission Request,iOS Android,permission camera location microphone,Request at point of use not on launch; explain why in context,Request device permissions with clear context and graceful denial
+Scroll Performance,iOS Android,scroll performance janky stutter smooth,Use native driver animations; avoid heavy onScroll JS work,Ensure smooth 60fps scrolling by minimizing JS thread work

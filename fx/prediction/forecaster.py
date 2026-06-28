@@ -45,8 +45,9 @@ def forecast_threshold_crossing(
         returns = np.diff(values) / values[:-1]
 
         daily_vol = np.std(returns) if len(returns) > 1 else 0.01
+        daily_drift = float(np.mean(returns)) if len(returns) > 1 else 0.0
 
-        # Current trend: 20-day vs 50-day moving average
+        # Current trend direction from MA crossover
         short_ma = np.mean(values[-20:]) if len(values) >= 20 else np.mean(values)
         long_ma = np.mean(values[-50:]) if len(values) >= 50 else np.mean(values)
         trend = (short_ma - long_ma) / long_ma if long_ma != 0 else 0
@@ -56,7 +57,7 @@ def forecast_threshold_crossing(
 
         # Probability of crossing threshold over the horizon
         threshold_decimal = threshold_pct / 100.0
-        expected_move = trend * horizon_days
+        expected_move = daily_drift * horizon_days
         horizon_std = daily_vol * math.sqrt(horizon_days)
         if horizon_std > 0:
             z_score = (threshold_decimal - abs(expected_move)) / horizon_std
@@ -66,10 +67,10 @@ def forecast_threshold_crossing(
 
         crossing_prob = max(0.0, min(1.0, crossing_prob))
 
-        # Confidence interval (1 sigma around current rate)
+        # Confidence interval (1 sigma around trend-adjusted expected rate)
         current_rate = float(values[-1])
-        confidence_lower = current_rate * (1.0 - horizon_std)
-        confidence_upper = current_rate * (1.0 + horizon_std)
+        confidence_lower = max(0.0, current_rate * (1.0 + expected_move - horizon_std))
+        confidence_upper = current_rate * (1.0 + expected_move + horizon_std)
 
         prediction = Prediction(
             currency_pair=currency_pair,

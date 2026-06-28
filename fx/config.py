@@ -10,7 +10,7 @@ DATABASE_URI = f"sqlite:///{DATABASE_PATH}"
 
 # Claude API
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-CLAUDE_MODEL = os.environ.get("FX_CLAUDE_MODEL", "claude-sonnet-4-20250514")
+CLAUDE_MODEL = os.environ.get("FX_CLAUDE_MODEL", "claude-opus-4-8")
 CLAUSE_EXTRACTION_MAX_TOKENS = 4096
 NOTIFICATION_MAX_TOKENS = 2048
 

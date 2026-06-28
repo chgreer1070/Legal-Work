@@ -43,9 +43,24 @@ def init_db(app=None):
     )
 
     Base.metadata.create_all(bind=engine)
+    _ensure_clause_formula_columns()
 
     if app is not None:
         app.config["FX_DB_ENGINE"] = engine
+
+
+def _ensure_clause_formula_columns():
+    """Add formula columns to fx_clauses on databases created before they existed."""
+    with engine.connect() as conn:
+        existing = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(fx_clauses)")}
+        for name, ddl in (
+            ("formula_type", "VARCHAR(50)"),
+            ("formula_expression", "TEXT"),
+            ("formula_description", "TEXT"),
+        ):
+            if name not in existing:
+                conn.exec_driver_sql(f"ALTER TABLE fx_clauses ADD COLUMN {name} {ddl}")
+        conn.commit()
 
 
 def get_session() -> Session:

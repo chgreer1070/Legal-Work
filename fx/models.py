@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -65,6 +66,9 @@ class FXClause(Base):
     adjustment_method: Mapped[str] = mapped_column(String(50), default="full_passthrough")
     notification_period_days: Mapped[int] = mapped_column(Integer, default=30)
     clause_text: Mapped[str] = mapped_column(Text, nullable=True)
+    formula_type: Mapped[str] = mapped_column(String(50), nullable=True)
+    formula_expression: Mapped[str] = mapped_column(Text, nullable=True)
+    formula_description: Mapped[str] = mapped_column(Text, nullable=True)
     confidence_score: Mapped[float] = mapped_column(Float, default=0.0)
     extracted_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
@@ -82,6 +86,9 @@ class FXClause(Base):
             "adjustment_method": self.adjustment_method,
             "notification_period_days": self.notification_period_days,
             "clause_text": self.clause_text,
+            "formula_type": self.formula_type,
+            "formula_expression": self.formula_expression,
+            "formula_description": self.formula_description,
             "confidence_score": self.confidence_score,
             "extracted_at": self.extracted_at.isoformat() if self.extracted_at else None,
         }
@@ -117,7 +124,7 @@ class Alert(Base):
     base_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     current_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     deviation_pct: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False)
-    exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=0)
+    exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=0, server_default=text("0"))
     status: Mapped[str] = mapped_column(String(50), default="triggered")
     notification_text: Mapped[str] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -144,7 +151,7 @@ class Alert(Base):
             "base_rate": float(self.base_rate),
             "current_rate": float(self.current_rate),
             "deviation_pct": float(self.deviation_pct),
-            "exposure_amount": float(self.exposure_amount),
+            "exposure_amount": float(self.exposure_amount or 0),
             "status": self.status,
             "notification_text": self.notification_text,
             "created_at": self.created_at.isoformat() if self.created_at else None,
