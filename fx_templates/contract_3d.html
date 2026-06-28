@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}3D Contract View - FX Recovery{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('fx.static', filename='css/contract-3d.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="graph-page">
+    <div class="graph-toolbar">
+        <div>
+            <h2 id="graph-title">{% if contract_id %}Contract 3D View{% else %}All Contracts - 3D View{% endif %}</h2>
+        </div>
+        <div class="graph-toolbar-right">
+            <button onclick="explodeGraph()" class="btn btn-sm">Explode</button>
+            <button onclick="resetView()" class="btn btn-sm">Reset View</button>
+            <button onclick="fitToView()" class="btn btn-sm">Fit</button>
+            {% if contract_id %}
+            <a href="/fx/contracts/{{ contract_id }}" class="btn btn-sm">Table View</a>
+            {% else %}
+            <a href="/fx/contracts" class="btn btn-sm">Table View</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="graph-layout">
+        <div id="graph-container" class="graph-canvas"></div>
+
+        <div class="graph-hint" id="graph-hint">
+            Click and drag nodes to rearrange. Scroll to zoom. Right-drag to pan.
+        </div>
+
+        <div class="graph-legend" id="graph-legend">
+            <h4>Node Types</h4>
+            <div id="legend-items"></div>
+        </div>
+
+        <div class="graph-panel" id="detail-panel">
+            <div class="panel-header">
+                <h3 id="panel-title">Details</h3>
+                <button onclick="hideDetailPanel()" class="panel-close">&times;</button>
+            </div>
+            <div id="panel-content" class="panel-body"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('fx.static', filename='js/vendor/3d-force-graph.min.js') }}"></script>
+<script src="{{ url_for('fx.static', filename='js/contract-3d.js') }}"></script>
+<script>
+    const contractId = {{ contract_id if contract_id else 'null' }};
+    document.addEventListener('DOMContentLoaded', function() {
+        initGraph('graph-container', contractId);
+    });
+</script>
+{% endblock %}

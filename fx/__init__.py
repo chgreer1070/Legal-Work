@@ -19,10 +19,12 @@ def create_fx_blueprint() -> Blueprint:
     from fx.routes.contracts import contracts_bp
     from fx.routes.alerts import alerts_bp
     from fx.routes.api import api_bp
+    from fx.routes.visualization import viz_bp
 
     bp.register_blueprint(dashboard_bp)
     bp.register_blueprint(contracts_bp)
     bp.register_blueprint(alerts_bp)
     bp.register_blueprint(api_bp)
+    bp.register_blueprint(viz_bp)
 
     return bp

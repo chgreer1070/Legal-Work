@@ -4,6 +4,9 @@
 {% block content %}
 <div class="fx-header">
     <h1>Customer Contracts</h1>
+    <div class="fx-actions">
+        <a href="/fx/contracts/3d" class="btn btn-primary">3D View All</a>
+    </div>
 </div>
 
 <div class="upload-card">
@@ -96,7 +99,10 @@ async function loadContracts() {
                     <td><span class="status-badge status-${esc(c.status)}">${esc(humanizeStatus(c.status))}</span></td>
                     <td>${parseInt(c.clause_count)}</td>
                     <td>${new Date(c.created_at).toLocaleDateString()}</td>
-                    <td><a href="/fx/contracts/${parseInt(c.id)}" class="btn btn-sm">View</a></td>
+                    <td>
+                        <a href="/fx/contracts/${parseInt(c.id)}" class="btn btn-sm">View</a>
+                        <a href="/fx/contracts/${parseInt(c.id)}/3d" class="btn btn-sm">3D</a>
+                    </td>
                 </tr>
             `).join('');
         }
