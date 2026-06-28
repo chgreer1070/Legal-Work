@@ -265,7 +265,12 @@ def msg_to_pdf(msg_path: Path, output_dir: Path) -> dict:
 
         ext_lower = Path(att_name).suffix.lower()
         safe_att  = _sanitize_filename(Path(att_name).stem)
-        raw_path  = att_dir / att_name
+        # Write to a sanitized basename, never the raw attacker-controlled
+        # att_name (which may contain '..' or an absolute path). The containment
+        # check is defense in depth in case sanitization is ever weakened.
+        raw_path  = att_dir / f"{safe_att}{ext_lower}"
+        if att_dir.resolve() not in raw_path.resolve().parents:
+            raise ValueError(f"Unsafe attachment filename: {att_name!r}")
 
         with open(raw_path, "wb") as f:
             f.write(att_data)
