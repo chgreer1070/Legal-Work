@@ -5,6 +5,7 @@
 <div class="fx-header">
     <h1>Contract Detail</h1>
     <div class="fx-actions">
+        <a href="/fx/contracts/{{ contract_id }}/3d" class="btn btn-primary">3D View</a>
         <button onclick="reExtract()" class="btn btn-secondary">Re-Extract Clauses</button>
         <a href="{{ url_for('fx.fx_contracts.list_contracts') }}" class="btn">Back to List</a>
     </div>
