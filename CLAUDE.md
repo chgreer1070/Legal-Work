@@ -9,6 +9,20 @@ This repo contains two unrelated apps:
 
 All work must be committed to a branch named `claude/<feature-slug>-<session-id>`. The git proxy rejects pushes to any other branch with HTTP 403. The session prompt always specifies the exact branch name to use.
 
+## Orientation & working habits (read first)
+
+Most wasted work in past sessions came from skipping orientation. Before editing or pushing, run:
+
+```bash
+bash scripts/session-orient.sh   # branch, HEAD vs origin, worktree, GitHub gate
+```
+
+- **Verify state before acting.** Confirm the branch, that HEAD matches origin, and that the tree is clean. If the code on disk doesn't match what the task context says was committed, you may be on a **stale checkout** — reconcile git state before editing, and don't re-implement work the canonical branch already has.
+- **Right-size the effort.** Match process to task size; confirm you're on the right base before spinning up heavy multi-agent reviews.
+- **Discovered credentials — ask first.** If you find a token the project says isn't sanctioned (e.g. `GH_TOKEN`), ask before exercising it; using a discovered credential trips the safety classifier.
+- **GitHub access is per-session.** Repo API returns `403 "not enabled for this session"` until the session *postdates* the Claude GitHub App connection. If gated, **a fresh session is required — resuming or retrying does not lift it.** Don't loop on retries.
+- **Self-modification is blocked.** Editing `.claude/settings.json` permissions or `.claude/hooks/*` is denied as self-modification — hand those to the user as paste-ready snippets instead of retrying.
+
 ## How to run the FX app
 
 ```bash
