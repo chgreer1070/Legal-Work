@@ -114,6 +114,14 @@ def api_contract_detail(contract_id: int):
 @contracts_bp.route("/contracts/upload", methods=["POST"])
 def upload_contract():
     """Upload a contract file and trigger ingestion."""
+    from fx.config import MAX_UPLOAD_MB
+
+    # Per-route size cap: the shared Flask app's MAX_CONTENT_LENGTH belongs
+    # to the converter, so the FX limit is enforced here.
+    max_bytes = MAX_UPLOAD_MB * 1024 * 1024
+    if request.content_length and request.content_length > max_bytes:
+        return jsonify({"error": f"File exceeds the {MAX_UPLOAD_MB} MB upload limit"}), 413
+
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 

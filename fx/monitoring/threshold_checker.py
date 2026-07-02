@@ -49,7 +49,9 @@ def check_all_thresholds() -> list[dict]:
             if base_rate == 0:
                 continue
 
-            deviation_pct = abs((current_rate - base_rate) / base_rate) * 100
+            signed_deviation_pct = (current_rate - base_rate) / base_rate * 100
+            deviation_pct = abs(signed_deviation_pct)
+            rate_direction = "up" if current_rate > base_rate else "down"
 
             if deviation_pct > clause.threshold_pct:
                 # Check if there's already an open alert for this clause
@@ -82,6 +84,7 @@ def check_all_thresholds() -> list[dict]:
                     base_rate=base_rate,
                     current_rate=current_rate,
                     deviation_pct=deviation_pct,
+                    rate_direction=rate_direction,
                     exposure_amount=exposure,
                     status="triggered",
                 )
@@ -98,6 +101,8 @@ def check_all_thresholds() -> list[dict]:
                         "base_rate": float(base_rate),
                         "current_rate": float(current_rate),
                         "deviation_pct": float(deviation_pct),
+                        "signed_deviation_pct": float(signed_deviation_pct),
+                        "rate_direction": rate_direction,
                         "threshold_pct": float(clause.threshold_pct),
                         "exposure_amount": float(exposure),
                         "exposure_unavailable": exposure_unavailable,

@@ -15,6 +15,68 @@ from fx.audit.logger import get_audit_log
 api_bp = Blueprint("fx_api", __name__)
 
 
+# ── Health ───────────────────────────────────────────────────────────────────
+
+@api_bp.route("/api/health")
+def health():
+    """Operational health: database, rate freshness, extraction mode."""
+    import os
+    from datetime import datetime
+
+    from sqlalchemy import text as sql_text
+
+    from fx.config import RATE_FETCH_INTERVAL_MINUTES
+
+    checks = {}
+    status = "ok"
+    http_code = 200
+
+    session = get_session()
+    try:
+        session.execute(sql_text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+        status = "error"
+        http_code = 503
+    finally:
+        session.close()
+
+    # Rate freshness: stale rates degrade the service but do not fail it —
+    # with the scheduler off (manual mode) rates only move on demand.
+    scheduler_enabled = os.environ.get("FX_SCHEDULER_ENABLED", "true").lower() == "true"
+    rate_ages = {}
+    stale = False
+    try:
+        for pair, data in get_latest_rates().items():
+            fetched = data.get("fetched_at")
+            if fetched:
+                age_min = (datetime.utcnow() - datetime.fromisoformat(fetched)).total_seconds() / 60
+                rate_ages[pair] = round(age_min, 1)
+                if scheduler_enabled and age_min > 2 * RATE_FETCH_INTERVAL_MINUTES:
+                    stale = True
+    except Exception as e:
+        checks["rates"] = f"error: {e}"
+    checks.setdefault("rates", "stale" if stale else "ok")
+    if stale and status == "ok":
+        status = "degraded"
+
+    # Extraction mode: Claude when credentials resolve, rule-based otherwise
+    try:
+        from fx.utils import get_anthropic_client
+        get_anthropic_client()
+        checks["extraction"] = "claude_api"
+    except Exception:
+        checks["extraction"] = "rule_based"
+
+    return jsonify({
+        "status": status,
+        "checks": checks,
+        "rate_age_minutes": rate_ages,
+        "scheduler_enabled": scheduler_enabled,
+    }), http_code
+
+
 # ── Dashboard ────────────────────────────────────────────────────────────────
 
 @api_bp.route("/api/dashboard/summary")

@@ -3,6 +3,7 @@ FX exposure and delta calculation.
 """
 
 import logging
+from datetime import date, timedelta
 from decimal import Decimal
 
 from fx.db import get_session
@@ -10,6 +11,16 @@ from fx.models import Transaction
 from fx.exposure.formula import FormulaError, evaluate_formula
 
 logger = logging.getLogger(__name__)
+
+# Settlement window per review frequency: exposure is computed over the
+# clause's current review period, not the contract's full transaction
+# history. Transactions whose period ended on or before the cutoff belong
+# to already-settled periods and must not inflate the current exposure.
+_PERIOD_WINDOW_DAYS = {
+    "monthly": 30,
+    "quarterly": 90,
+    "annual": 365,
+}
 
 
 def calculate_exposure(
@@ -23,28 +34,39 @@ def calculate_exposure(
     """
     Calculate financial exposure from rate deviation and transaction volume.
 
-    When the clause carries a contract-derived formula_expression, the
-    exposure is computed from that formula. Otherwise it falls back to
-    the default: volume * |rate_delta| (volume is in USD, base currency).
+    When a clause is supplied, only transactions inside the clause's current
+    review period (monthly/quarterly/annual) are counted, and if the clause
+    carries a contract-derived formula_expression the exposure is computed
+    from that formula. Without a clause, the legacy behavior applies: all
+    transactions, default formula volume * |rate_delta| (volume in USD).
     """
     owns_session = session is None
     if owns_session:
         session = get_session()
     try:
-        # Get total transaction volume for this contract and pair
-        transactions = (
-            session.query(Transaction)
-            .filter(
-                Transaction.contract_id == contract_id,
-                Transaction.currency_pair == currency_pair,
-            )
-            .all()
+        query = session.query(Transaction).filter(
+            Transaction.contract_id == contract_id,
+            Transaction.currency_pair == currency_pair,
         )
+
+        if clause is not None:
+            frequency = (clause.review_frequency or "monthly").lower()
+            window = _PERIOD_WINDOW_DAYS.get(frequency)
+            if window is None:
+                logger.warning(
+                    "Unknown review frequency %r on clause %s — using monthly window",
+                    frequency, getattr(clause, "id", "?"),
+                )
+                window = _PERIOD_WINDOW_DAYS["monthly"]
+            cutoff = date.today() - timedelta(days=window)
+            query = query.filter(Transaction.period_end > cutoff)
+
+        transactions = query.all()
 
         if not transactions:
             return Decimal("0")
 
-        total_volume = sum(t.volume or 0 for t in transactions)
+        total_volume = sum((t.volume or Decimal("0") for t in transactions), Decimal("0"))
 
         if clause is not None and clause.formula_expression:
             try:
@@ -53,7 +75,7 @@ def calculate_exposure(
                     _formula_variables(total_volume, base_rate, current_rate, clause),
                 )
                 # Adjustment amounts are non-negative by construction
-                return round(Decimal(str(max(value, 0.0))), 2)
+                return round(max(value, Decimal("0")), 2)
             except FormulaError as e:
                 logger.error(
                     "Formula evaluation failed for clause %s (%s): %s — falling back to default",
@@ -70,21 +92,25 @@ def calculate_exposure(
             session.close()
 
 
-def _formula_variables(total_volume, base_rate: Decimal, current_rate: Decimal, clause) -> dict[str, float]:
-    """Build the variable bindings for a contract formula evaluation."""
-    base = float(base_rate)
-    current = float(current_rate)
+def _formula_variables(total_volume: Decimal, base_rate: Decimal, current_rate: Decimal, clause) -> dict[str, Decimal]:
+    """Build the variable bindings for a contract formula evaluation.
+
+    Everything stays Decimal end-to-end so monetary results carry no
+    binary floating-point drift.
+    """
+    base = Decimal(str(base_rate))
+    current = Decimal(str(current_rate))
     rate_delta = current - base
-    deviation = rate_delta / base if base != 0 else 0.0
+    deviation = rate_delta / base if base != 0 else Decimal("0")
     return {
-        "volume": float(total_volume),
+        "volume": Decimal(str(total_volume)),
         "base_rate": base,
         "current_rate": current,
         "rate_delta": rate_delta,
         "abs_rate_delta": abs(rate_delta),
         "deviation": deviation,
         "abs_deviation": abs(deviation),
-        "threshold": float(clause.threshold_pct) / 100.0,
+        "threshold": Decimal(str(clause.threshold_pct)) / 100,
     }
 
 

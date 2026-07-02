@@ -95,36 +95,47 @@ CLAUSE_OUTPUT_SCHEMA = {
 
 def extract_clauses(contract_text: str, contract_id: int | None = None) -> ExtractionResult:
     """
-    Send contract text to Claude API and extract structured FX clause data.
+    Extract structured FX clause data from contract text.
+
+    Primary path is the Claude API. When the API is unavailable (no
+    credentials, network failure, exhausted retries) the deterministic
+    rule-based extractor takes over so ingestion keeps working — its
+    clauses carry lower confidence scores and an audit annotation.
 
     Returns an ExtractionResult with validated clause schemas.
     """
     from fx.utils import call_claude_with_retry, get_anthropic_client
 
-    client = get_anthropic_client()
     # Plain replace, not str.format(): the template contains literal JSON
     # braces that format() would misread as fields (KeyError '"clauses"').
     prompt = EXTRACTION_PROMPT.replace("{contract_text}", contract_text)
-    request_kwargs = dict(
-        model=CLAUDE_MODEL,
-        max_tokens=CLAUSE_EXTRACTION_MAX_TOKENS,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
     try:
-        # Structured outputs guarantee schema-valid JSON on supporting models
-        response = call_claude_with_retry(
-            client,
-            output_config={"format": {"type": "json_schema", "schema": CLAUSE_OUTPUT_SCHEMA}},
-            **request_kwargs,
+        client = get_anthropic_client()
+        request_kwargs = dict(
+            model=CLAUDE_MODEL,
+            max_tokens=CLAUSE_EXTRACTION_MAX_TOKENS,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
         )
-    except anthropic.BadRequestError:
-        # Model doesn't support structured outputs — fall back to prompt-only
-        # JSON; _parse_clauses handles prose-wrapped responses.
+        try:
+            # Structured outputs guarantee schema-valid JSON on supporting models
+            response = call_claude_with_retry(
+                client,
+                output_config={"format": {"type": "json_schema", "schema": CLAUSE_OUTPUT_SCHEMA}},
+                **request_kwargs,
+            )
+        except anthropic.BadRequestError:
+            # Model doesn't support structured outputs — fall back to prompt-only
+            # JSON; _parse_clauses handles prose-wrapped responses.
+            logging.getLogger(__name__).warning(
+                "Structured outputs rejected by model %s; retrying without", CLAUDE_MODEL
+            )
+            response = call_claude_with_retry(client, **request_kwargs)
+    except Exception as e:
         logging.getLogger(__name__).warning(
-            "Structured outputs rejected by model %s; retrying without", CLAUDE_MODEL
+            "Claude extraction unavailable (%s) — using rule-based extractor", e
         )
-        response = call_claude_with_retry(client, **request_kwargs)
+        return _extract_rule_based(contract_text, contract_id, reason=str(e))
 
     raw_text = response.content[0].text
 
@@ -145,6 +156,29 @@ def extract_clauses(contract_text: str, contract_id: int | None = None) -> Extra
     )
 
     return ExtractionResult(clauses=clauses, raw_response=raw_text)
+
+
+def _extract_rule_based(contract_text: str, contract_id: int | None, reason: str) -> ExtractionResult:
+    """Run the deterministic extractor and audit the fallback."""
+    from fx.ingestion.rule_extractor import extract_clauses_rule_based
+
+    clauses = extract_clauses_rule_based(contract_text)
+    raw_response = json.dumps([c.model_dump() for c in clauses])
+
+    log_event(
+        event_type="clause_extraction",
+        entity_type="contract",
+        entity_id=contract_id,
+        action=f"Extracted {len(clauses)} FX clauses (rule-based fallback)",
+        actor="rule_extractor",
+        details={
+            "clause_count": len(clauses),
+            "extractor": "rule_based",
+            "fallback_reason": reason[:200],
+        },
+    )
+
+    return ExtractionResult(clauses=clauses, raw_response=raw_response)
 
 
 def _parse_clauses(raw_text: str) -> list[FXClauseSchema]:

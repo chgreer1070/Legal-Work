@@ -6,7 +6,7 @@ no-breach / exact-threshold boundary, the skip paths (zero base rate, missing
 rate, inactive contract), open-alert dedup, and the audit write.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
@@ -54,14 +54,28 @@ def test_breach_creates_single_alert(test_db, db_session):
 
 
 def test_breach_records_exposure_from_transactions(test_db, db_session):
+    # Exposure is period-aware: only transactions inside the clause's current
+    # review window count (monthly default = 30 days). Volume in an
+    # already-settled period must not inflate the exposure.
     contract, _ = _make_active_contract_with_clause(db_session)
+    today = date.today()
     db_session.add(
         Transaction(
             contract_id=contract.id,
             currency_pair="USD/BRL",
+            period_start=today - timedelta(days=30),
+            period_end=today,
+            volume=Decimal("1000"),
+            transaction_count=1,
+        )
+    )
+    db_session.add(
+        Transaction(  # settled a year ago — excluded from the current window
+            contract_id=contract.id,
+            currency_pair="USD/BRL",
             period_start=date(2025, 1, 1),
             period_end=date(2025, 1, 31),
-            volume=Decimal("1000"),
+            volume=Decimal("999999"),
             transaction_count=1,
         )
     )
@@ -71,8 +85,9 @@ def test_breach_records_exposure_from_transactions(test_db, db_session):
     result = check_all_thresholds()
 
     assert len(result) == 1
-    # 1000 * |5.50 - 5.00| = 500.00
+    # 1000 * |5.50 - 5.00| = 500.00 (stale volume excluded)
     assert result[0]["exposure_amount"] == pytest.approx(500.0)
+    assert result[0]["rate_direction"] == "up"
 
 
 def test_no_alert_below_threshold(test_db, db_session):
