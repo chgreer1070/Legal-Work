@@ -8,8 +8,12 @@ AST whitelist before storage and evaluated without eval().
 """
 
 import ast
+from decimal import Decimal, DivisionByZero, InvalidOperation, Overflow
 
 MAX_EXPRESSION_LENGTH = 500
+
+_POW_BASE_LIMIT = Decimal("1e6")
+_POW_EXP_LIMIT = Decimal("100")
 
 ALLOWED_FUNCTIONS = {"min": min, "max": max, "abs": abs}
 
@@ -74,7 +78,17 @@ def validate_formula(expression: str) -> None:
     _validate_node(tree)
 
 
-def _eval_node(node: ast.AST, variables: dict[str, float]) -> float:
+def _to_decimal(value) -> Decimal:
+    """Coerce a numeric input to Decimal without float representation drift."""
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, ValueError) as e:
+        raise FormulaError(f"Non-numeric value: {value!r}") from e
+
+
+def _eval_node(node: ast.AST, variables: dict) -> Decimal:
     if isinstance(node, ast.Expression):
         return _eval_node(node.body, variables)
     if isinstance(node, ast.BinOp):
@@ -91,9 +105,14 @@ def _eval_node(node: ast.AST, variables: dict[str, float]) -> float:
                 raise FormulaError("Division by zero")
             return left / right
         if isinstance(node.op, ast.Pow):
-            if abs(left) > 1e6 or abs(right) > 100:
+            if abs(left) > _POW_BASE_LIMIT or abs(right) > _POW_EXP_LIMIT:
                 raise FormulaError("Exponentiation operands out of range")
-            return left ** right
+            if right != right.to_integral_value():
+                raise FormulaError("Exponent must be an integer")
+            try:
+                return left ** int(right)
+            except (InvalidOperation, Overflow, DivisionByZero) as e:
+                raise FormulaError(f"Exponentiation failed: {e}") from e
         raise FormulaError(f"Operator not allowed: {type(node.op).__name__}")
     if isinstance(node, ast.UnaryOp):
         operand = _eval_node(node.operand, variables)
@@ -101,21 +120,23 @@ def _eval_node(node: ast.AST, variables: dict[str, float]) -> float:
     if isinstance(node, ast.Call):
         func = ALLOWED_FUNCTIONS[node.func.id]
         args = [_eval_node(arg, variables) for arg in node.args]
-        return float(func(*args))
+        return func(*args)
     if isinstance(node, ast.Constant):
-        return float(node.value)
+        return _to_decimal(node.value)
     if isinstance(node, ast.Name):
-        return float(variables[node.id])
+        return _to_decimal(variables[node.id])
     raise FormulaError(f"Syntax not allowed: {type(node).__name__}")
 
 
-def evaluate_formula(expression: str, variables: dict[str, float]) -> float:
+def evaluate_formula(expression: str, variables: dict) -> Decimal:
     """
     Validate and evaluate a formula against the supplied variables.
 
-    Returns the computed value as a float. Raises FormulaError on any
-    validation or evaluation failure (bad syntax, unknown variable,
-    division by zero).
+    All arithmetic is done in Decimal so monetary results carry no binary
+    floating-point drift; float inputs are converted via str() to preserve
+    their printed value. Returns the computed value as a Decimal. Raises
+    FormulaError on any validation or evaluation failure (bad syntax,
+    unknown variable, division by zero, non-integer exponent).
     """
     validate_formula(expression)
     tree = ast.parse(expression, mode="eval")

@@ -18,6 +18,9 @@ from fx.monitoring.scheduler import start_scheduler
 
 def create_app():
     """Configure and return the unified Flask application."""
+    from fx.config import validate_config
+    validate_config()
+
     # Try to import the existing converter app; fall back to a standalone Flask app
     try:
         from app import app as base_app

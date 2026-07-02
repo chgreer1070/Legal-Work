@@ -66,8 +66,10 @@ This Claude Code sandbox has constraints that look like bugs but aren't:
 - ✅ 15 hardening fixes landed in `14e94a9` (DB WAL+FK, exposure formula, z-score math, state machine, audit logging, retry helper, scheduler app context)
 - ✅ Stress test suite landed (`stress_tests/`)
 - ✅ Live exchangerate.host feed integrated with mock fallback (`44a1b9a`)
-- ❌ No unit/integration tests yet — only stress tests
-- ❌ No PR opened (must be created manually via GitHub web UI)
+- ✅ Unit test suite in `tests/` (100 tests; run with `python -m pytest -q --ignore=tests/test_converter_app.py` unless converter deps are installed)
+- ✅ Production accuracy pass: Decimal formula evaluation, period-aware exposure windows (monthly/quarterly/annual), directional alerts (`rate_direction`)
+- ✅ Rule-based clause extractor (`fx/ingestion/rule_extractor.py`) — deterministic fallback when the Claude API is unavailable, so upload → extract → track → alert works in any environment
+- ✅ `/fx/api/health` endpoint (DB, rate freshness, extraction mode), hot-path DB indexes, per-route upload size cap (`FX_MAX_UPLOAD_MB`), startup config validation
 
 ## Key files
 

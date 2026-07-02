@@ -116,6 +116,10 @@ class FXRate(Base):
 
 class Alert(Base):
     __tablename__ = "alerts"
+    __table_args__ = (
+        Index("ix_alerts_status", "status"),
+        Index("ix_alerts_clause_status", "clause_id", "status"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     clause_id: Mapped[int] = mapped_column(Integer, ForeignKey("fx_clauses.id"), nullable=False)
@@ -124,6 +128,9 @@ class Alert(Base):
     base_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     current_rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
     deviation_pct: Mapped[Decimal] = mapped_column(Numeric(8, 4), nullable=False)
+    # 'up' = current rate above base (USD strengthened vs the foreign leg),
+    # 'down' = below base. The trigger itself stays direction-agnostic.
+    rate_direction: Mapped[str] = mapped_column(String(10), nullable=True)
     exposure_amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False, default=0, server_default=text("0"))
     status: Mapped[str] = mapped_column(String(50), default="triggered")
     notification_text: Mapped[str] = mapped_column(Text, nullable=True)
@@ -151,6 +158,7 @@ class Alert(Base):
             "base_rate": float(self.base_rate),
             "current_rate": float(self.current_rate),
             "deviation_pct": float(self.deviation_pct),
+            "rate_direction": self.rate_direction,
             "exposure_amount": float(self.exposure_amount or 0),
             "status": self.status,
             "notification_text": self.notification_text,
@@ -193,6 +201,9 @@ class Prediction(Base):
 
 class Transaction(Base):
     __tablename__ = "transactions"
+    __table_args__ = (
+        Index("ix_transactions_contract_pair_end", "contract_id", "currency_pair", "period_end"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     contract_id: Mapped[int] = mapped_column(Integer, ForeignKey("contracts.id"), nullable=False)
